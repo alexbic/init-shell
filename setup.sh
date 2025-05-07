@@ -1,68 +1,110 @@
 #!/bin/bash
 
-set -e
-
-echo "🔧 Начинаем инициализацию окружения..."
-
-# Путь к директории, откуда был запущен скрипт
+# ──────────────────────────────────────────────────────────────
+# 📁 Переменные
+BASE_DIR="$HOME/.myshell"
+BACKUP_DIR="$BASE_DIR/backup"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Установка зависимостей
-echo "📦 Проверка и установка необходимых пакетов..."
-if command -v apt &> /dev/null; then
-  sudo apt update
-  sudo apt install -y git curl zsh
-else
+# GIT: Репозиторий с dotfiles
+GIT_DOTFILES_REPO="https://github.com/alexbic/.dotfiles.git"
+# GIT: Репозиторий с конфигурацией tmux
+GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
+# GIT: Установка Oh My Zsh
+GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+
+# ──────────────────────────────────────────────────────────────
+# 🧪 Проверка системы
+if ! command -v apt &>/dev/null; then
   echo "❌ Поддерживаются только apt-системы (Ubuntu/Debian)."
   exit 1
 fi
 
-# Проверка наличия zsh
-if ! command -v zsh &> /dev/null; then
-  echo "❌ Ошибка установки ZSH."
-  exit 1
-else
-  echo "✅ ZSH установлен."
+# 📦 Установка базовых пакетов
+echo "📦 Обновляем apt и устанавливаем git, curl, zsh..."
+sudo apt update
+sudo apt install -y git curl zsh
+
+# ──────────────────────────────────────────────────────────────
+# 🧼 Удаляем старую директорию ~/.myshell, если она есть
+echo "🧼 Удаляем старую директорию $BASE_DIR (если есть)..."
+rm -rf "$BASE_DIR"
+
+# 💾 Создание структуры каталогов
+echo "📁 Создаем каталоги в ~/.myshell..."
+mkdir -p "$BASE_DIR"
+mkdir -p "$BACKUP_DIR"
+
+# 🔁 Переход в рабочую директорию
+cd "$BASE_DIR" || { echo "❌ Не удалось перейти в $BASE_DIR"; exit 1; }
+
+# 🗂 Резервное копирование старых настроек
+echo "🗂 Перемещаем старые настройки в $BACKUP_DIR..."
+mv "$HOME/.zshrc" "$BACKUP_DIR" 2>/dev/null || true
+mv "$HOME/.tmux.conf" "$BACKUP_DIR" 2>/dev/null || true
+mv "$HOME/.tmux.conf.local" "$BACKUP_DIR" 2>/dev/null || true
+mv "$HOME/.oh-my-zsh" "$BACKUP_DIR" 2>/dev/null || true
+
+# 🧹 Удаление симлинков и временных файлов
+echo "🧹 Удаляем старые симлинки и временные файлы..."
+find "$HOME" -maxdepth 1 -type f \( \
+  -name ".zshrc" -o \
+  -name ".zshrc.pre-oh-my-zsh" -o \
+  -name ".zsh_history" -o \
+  -name ".zlogin" -o \
+  -name ".zlogout" -o \
+  -name ".zprofile" -o \
+  -name ".zshenv" -o \
+  -name ".zsh*" -o \
+  -name ".tmux.conf" -o \
+  -name ".tmux.conf.local" -o \
+  -name ".tmux*" \
+\) -exec rm -f {} \;
+
+# ──────────────────────────────────────────────────────────────
+# 📥 Клонируем dotfiles
+echo "📥 Клонируем dotfiles..."
+git clone "$GIT_DOTFILES_REPO" "dotfiles"
+
+# 📥 Клонируем tmux конфигурации
+echo "📥 Клонируем tmux конфигурации..."
+git clone "$GIT_TMUX_REPO" "tmux"
+
+# 📥 Устанавливаем Oh My Zsh
+if [[ -d "$HOME/.oh-my-zsh" ]]; then
+  echo "♻️ Обнаружен установленный Oh My Zsh. Выполняем деинсталляцию..."
+  export UNATTENDED=true
+  "$HOME/.oh-my-zsh/tools/uninstall.sh" || echo "⚠️ Ошибка при деинсталляции, продолжаем..."
 fi
 
-# Установка Oh My Zsh
-if [ ! -d "${HOME}/.oh-my-zsh" ]; then
-  echo "✨ Устанавливаем Oh My Zsh..."
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
-  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-else
-  echo "✅ Oh My Zsh уже установлен."
-fi
+# 🧼 Удаляем остатки Oh My Zsh (если не попали в бэкап)
+echo "🧼 Удаляем остатки Oh My Zsh..."
+rm -rf "$HOME/.oh-my-zsh"
 
-# Установка tmux
-if [ ! -d "${HOME}/.tmux" ]; then
-  echo "📦 Клонируем gpakosz/.tmux..."
-  git clone --single-branch https://github.com/gpakosz/.tmux.git ~/.tmux
-  ln -s -f ~/.tmux/.tmux.conf ~/.tmux.conf
-else
-  echo "✅ .tmux уже склонирован."
-fi
+# 📥 Устанавливаем свежий Oh My Zsh
+echo "📥 Устанавливаем свежий Oh My Zsh..."
+sh -c "$(curl -fsSL $GIT_OMZ_INSTALL_URL)"
 
-# Клонирование dotfiles
-DOTFILES_DIR="${HOME}/.dotfiles"
-if [ ! -d "$DOTFILES_DIR" ]; then
-  echo "📁 Клонируем твой репозиторий .dotfiles..."
-  git clone https://github.com/alexbic/.dotfiles.git "$DOTFILES_DIR"
-else
-  echo "✅ .dotfiles уже присутствует."
-fi
+# ⚙️ Настройка Zsh
+echo "⚙️ Настраиваем Zsh..."
+ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
 
-# Подключение конфигов
-echo "🔗 Подключаем конфиги..."
-ln -sf "$DOTFILES_DIR/.zshrc" ~/.zshrc
-ln -sf "$DOTFILES_DIR/tmux.conf.local" ~/.tmux.conf.local
+# 📦 Установка плагинов для Zsh
+echo "📦 Устанавливаем плагины для Zsh..."
+git clone https://github.com/zsh-users/zsh-autosuggestions "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"
+git clone https://github.com/zsh-users/zsh-syntax-highlighting "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"
 
-echo "✅ Готово! Перезапусти терминал или выполни 'exec zsh'"
+# ⚙️ Настройка tmux
+echo "⚙️ Настраиваем tmux..."
+ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
+ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
 
-# Удаление папки init-shell
+# 🗑️ Удаляем временную папку init-shell, если запускались из неё
 if [[ "$SCRIPT_DIR" == */init-shell ]]; then
-  echo "🧹 Удаляем временную папку init-shell..."
+  echo "🗑️ Удаляем временную папку init-shell..."
   cd ~
   rm -rf "$SCRIPT_DIR"
-  echo "🗑️ init-shell удалён."
+  echo "✅ init-shell удалён."
 fi
+
+echo "🎉 Установка завершена успешно!"
