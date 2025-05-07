@@ -40,10 +40,20 @@ cd "$BASE_DIR" || { echo "❌ Не удалось перейти в $BASE_DIR"; 
 
 # 🗂 Резервное копирование старых настроек
 echo "🗂 Перемещаем старые настройки в $BACKUP_DIR..."
-mv "$HOME/.zshrc" "$BACKUP_DIR" 2>/dev/null || true
-mv "$HOME/.tmux.conf" "$BACKUP_DIR" 2>/dev/null || true
-mv "$HOME/.tmux.conf.local" "$BACKUP_DIR" 2>/dev/null || true
-mv "$HOME/.oh-my-zsh" "$BACKUP_DIR" 2>/dev/null || true
+for file in .zshrc .tmux.conf .tmux.conf.local; do
+  src="$HOME/$file"
+  dest="$BACKUP_DIR/$file"
+  if [ -L "$src" ]; then
+    echo "🔁 $file — это симлинк. Копируем реальный файл..."
+    cp --dereference "$src" "$dest" 2>/dev/null || true
+  elif [ -f "$src" ]; then
+    echo "📄 $file — обычный файл. Перемещаем..."
+    mv "$src" "$dest" 2>/dev/null || true
+  fi
+done
+
+# Копируем .oh-my-zsh вместо перемещения
+cp -a "$HOME/.oh-my-zsh" "$BACKUP_DIR/.oh-my-zsh" 2>/dev/null || true
 
 # 🧹 Удаление симлинков и временных файлов
 echo "🧹 Удаляем старые симлинки и временные файлы..."
@@ -77,7 +87,7 @@ if [[ -d "$HOME/.oh-my-zsh" ]]; then
   "$HOME/.oh-my-zsh/tools/uninstall.sh" || echo "⚠️ Ошибка при деинсталляции, продолжаем..."
 fi
 
-# 🧼 Удаляем остатки Oh My Zsh (если не попали в бэкап)
+# 🧼 Удаляем остатки Oh My Zsh
 echo "🧼 Удаляем остатки Oh My Zsh..."
 rm -rf "$HOME/.oh-my-zsh"
 
