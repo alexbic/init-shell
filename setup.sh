@@ -83,7 +83,7 @@ rm -rf "$HOME/.oh-my-zsh"
 
 # 📥 Устанавливаем свежий Oh My Zsh
 echo "📥 Устанавливаем свежий Oh My Zsh..."
-sh -c "$(curl -fsSL $GIT_OMZ_INSTALL_URL)"
+RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL $GIT_OMZ_INSTALL_URL)"
 
 # ⚙️ Настройка Zsh
 echo "⚙️ Настраиваем Zsh..."
