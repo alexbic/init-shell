@@ -18,7 +18,7 @@
 
 ```text
 ~/.myshell/
-├── backup/     # Старые конфиги (.zshrc, .tmux.conf и другие)
+├── backup/     # Резервные копии после сохранённые перед исполнение скрипта (.zshrc, .tmux.conf, .myshell и другие)
 ├── dotfiles/   # Ваши dotfiles (.zshrc, .tmux.conf.local и т.д.)
                 https://github.com/alexbic/.dotfiles.git
 ├── tmux/       # Конфигурация tmux от gpakosz
