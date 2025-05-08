@@ -72,7 +72,7 @@ if [[ -d "$BASE_DIR" ]]; then
   rsync -a --exclude 'backup/' "$BASE_DIR/" "$TMP_BACKUP_DIR/"
 
   echo "♻️ Очищаем старую установку (кроме backup)..."
-  find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -exec rm -rf {} + || true
+  find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*"  -print0 | xargs -0 rm -rf 2>/dev/null || true
 
 else
   echo "📁 Создаём структуру $BASE_DIR..."
