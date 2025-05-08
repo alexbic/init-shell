@@ -119,6 +119,21 @@ git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" || {
   exit 1
 }
 
+
+# 📥 Устанавливаем Oh-My-Zsh
+if [[ -d "$HOME/.oh-my-zsh" ]]; then
+  echo "♻️ Обнаружен установленный Oh-My-Zsh. Выполняем деинсталляцию..."
+  export UNATTENDED=true
+  chmod +x "$HOME/.oh-my-zsh/tools/uninstall.sh" 2>/dev/null || true
+  "$HOME/.oh-my-zsh/tools/uninstall.sh" || echo "⚠️ Ошибка при деинсталляции, продолжаем..."
+fi
+
+if [[ -L "$BASE_DIR/.zshrc.omz-uninstalled"* ]]; then
+  echo "Удаление старой символической ссылки .zshrc.omz-uninstalled..."
+  rm -f "$BASE_DIR/.zshrc.omz-uninstalled"*  # Удаление всех старых ссылок
+fi
+
+
 # ♻️ Удаляем старый Oh-My-Zsh
 # Проверяем, что .oh-my-zsh существует, и действуем в зависимости от типа
 if [[ -e "$HOME/.oh-my-zsh" || -L "$HOME/.oh-my-zsh" ]]; then
@@ -138,6 +153,7 @@ if [[ -e "$HOME/.oh-my-zsh" || -L "$HOME/.oh-my-zsh" ]]; then
 else
   echo "🛠 .oh-my-zsh не существует, ничего удалять не нужно."
 fi
+
 
 # 📥 Установка нового Oh-My-Zsh
 echo -e "\033[34m📥 Устанавливаем Oh-My-Zsh...\033[0m"
