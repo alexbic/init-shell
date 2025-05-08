@@ -92,14 +92,14 @@ for file in .zsh* .tmux*; do
   fi
 done
 
-# 📥 Клонируем dotfiles
+# 📦 Клонируем dotfiles
 echo -e "\033[34m📥 Клонируем dotfiles...\033[0m"
 git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" || {
   echo -e "\033[31m❌ Ошибка при клонировании dotfiles.\033[0m"
   exit 1
 }
 
-# 📥 Клонируем tmux
+# 📦 Клонируем tmux
 echo -e "\033[34m📥 Клонируем tmux конфигурацию...\033[0m"
 git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" || {
   echo -e "\033[31m❌ Ошибка при клонировании tmux.\033[0m"
