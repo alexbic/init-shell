@@ -121,6 +121,9 @@ echo "🔁 Перемещаем Oh-My-Zsh в $BASE_DIR..."
 mv "$HOME/.oh-my-zsh" "$BASE_DIR/ohmyzsh"
 ln -s "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
 
+# 🛠️ Обновляем владельца BASE_DIR
+sudo chown -R "$USER":"$USER" "$BASE_DIR"
+
 # ⚙️ Настройка Zsh
 ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
 
