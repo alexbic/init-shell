@@ -20,8 +20,13 @@
 ~/.myshell/
 ├── backup/     # Старые конфиги (.zshrc, .tmux.conf и другие)
 ├── dotfiles/   # Ваши dotfiles (.zshrc, .tmux.conf.local и т.д.)
+                https://github.com/alexbic/.dotfiles.git
 ├── tmux/       # Конфигурация tmux от gpakosz
+                https://github.com/gpakosz/.tmux.git
 └── ohmyzsh/    # Установленная версия Oh My Zsh и плагины
+                https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+                https://github.com/zsh-users/zsh-autosuggestions
+                https://github.com/zsh-users/zsh-syntax-highlighting
 ```
 
 Внимание!
