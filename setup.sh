@@ -128,11 +128,8 @@ if [[ -d "$HOME/.oh-my-zsh" ]]; then
   "$HOME/.oh-my-zsh/tools/uninstall.sh" || echo "⚠️ Ошибка при деинсталляции, продолжаем..."
 fi
 
-if [[ -L "$BASE_DIR/.zshrc.omz-uninstalled"* ]]; then
-  echo "Удаление старой символической ссылки .zshrc.omz-uninstalled..."
-  rm -f "$BASE_DIR/.zshrc.omz-uninstalled"*  # Удаление всех старых ссылок
-fi
-
+echo "🧹 Удаляем старые .zshrc.omz-uninstalled-* ссылки..."
+find "$HOME" -maxdepth 1 -type l -name ".zshrc.omz-uninstalled-*" -exec rm -f {} \;
 
 # ♻️ Удаляем старый Oh-My-Zsh
 # Проверяем, что .oh-my-zsh существует, и действуем в зависимости от типа
