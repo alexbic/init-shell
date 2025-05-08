@@ -38,7 +38,7 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 TMP_BACKUP_DIR="/tmp/myshell_backup_$TIMESTAMP"
 ARCHIVE_NAME="backup_$TIMESTAMP.tar.gz"
 
-GIT_DOTFILES_REPO="https://github.com/alexbic/.dotfiles.git"
+GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
 GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
 GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
 
@@ -172,6 +172,9 @@ sudo chown -R "$USER":"$USER" "$BASE_DIR"
 
 # ⚙️ Настройка Zsh
 ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
+
+# ⚙️ Настройка vim
+ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc
 
 # 📦 Плагины Zsh
 echo "📦 Устанавливаем плагины..."
