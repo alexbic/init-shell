@@ -64,7 +64,15 @@ mkdir -p "$TMP_BACKUP_DIR"
 if [[ -d "$BASE_DIR" ]]; then
   echo "🗂 Обнаружена предыдущая установка. Делаем резервную копию..."
   mkdir -p "$BACKUP_DIR"
-  find "$BASE_DIR" -mindepth 1 -not -path "$BASE_DIR/backup" -exec mv -t "$TMP_BACKUP_DIR" {} + || true
+
+#  find "$BASE_DIR" -mindepth 1 -not -path "$BASE_DIR/backup" -exec mv -t "$TMP_BACKUP_DIR" {} + || true
+
+  echo "📦 Копируем содержимое $BASE_DIR в $TMP_BACKUP_DIR (без каталога backup)..."
+  rsync -a --exclude 'backup' "$BASE_DIR/" "$TMP_BACKUP_DIR/"
+
+  echo "♻️ Очищаем старую установку (кроме backup)..."
+  find "$BASE_DIR" -mindepth 1 -not -path "$BASE_DIR/backup" -exec rm -rf {} +
+
 else
   echo "📁 Создаём структуру $BASE_DIR..."
   mkdir -p "$BASE_DIR" "$BACKUP_DIR"
