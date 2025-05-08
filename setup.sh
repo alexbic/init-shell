@@ -88,18 +88,22 @@ rm -rf "$TMP_BACKUP_DIR"
 echo -e "\033[33m🧹 Удаляем старые конфиги и симлинки...\033[0m"
 for file in .zsh* .tmux*; do
   if [[ -e "$HOME/$file" ]]; then
-    rm -f "$HOME/$file"
+    if [[ -d "$HOME/$file" ]]; then
+      rm -rf "$HOME/$file"  # Добавляем -rf для удаления каталогов
+    else
+      rm -f "$HOME/$file"
+    fi
   fi
 done
 
-# 📦 Клонируем dotfiles
+# 📥 Клонируем dotfiles
 echo -e "\033[34m📥 Клонируем dotfiles...\033[0m"
 git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" || {
   echo -e "\033[31m❌ Ошибка при клонировании dotfiles.\033[0m"
   exit 1
 }
 
-# 📦 Клонируем tmux
+# 📥 Клонируем tmux
 echo -e "\033[34m📥 Клонируем tmux конфигурацию...\033[0m"
 git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" || {
   echo -e "\033[31m❌ Ошибка при клонировании tmux.\033[0m"
