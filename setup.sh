@@ -17,7 +17,7 @@ if ! ping -c 1 1.1.1.1 &>/dev/null; then
 fi
 
 # 🧪 Проверка доступности GitHub
-if ! curl -s --fail https://github.com > /dev/null; then
+if ! curl -s -o /dev/null -I -L --fail https://github.com; then
   echo -e "\033[31m❌ GitHub недоступен. Проверьте подключение к сети или VPN.\033[0m"
   exit 1
 fi
