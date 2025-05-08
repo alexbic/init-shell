@@ -16,9 +16,8 @@
 
 После выполнения скрипта будет создана следующая структура:
 
-```text
 ~/.myshell/
-├── backup/     # Резервные копии после сохранённые перед исполнение скрипта (.zshrc, .tmux.conf, .myshell и другие)
+├── backup/     # Резервные копии сохранённые перед исполнение скрипта (.zshrc, .tmux.conf, .myshell)
 ├── dotfiles/   # Ваши dotfiles (.zshrc, .tmux.conf.local и т.д.)
                  `https://github.com/alexbic/.dotfiles.git`
 ├── tmux/       # Конфигурация tmux от gpakosz
@@ -27,8 +26,7 @@
                  `https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh`
                  `https://github.com/zsh-users/zsh-autosuggestions`
                  `https://github.com/zsh-users/zsh-syntax-highlighting`
-```
-
+                 
 Внимание!
 • Скрипт выполняет удаление старых конфигов и временных файлов, поэтому будьте внимательны, если у вас есть важные
 настройки в файлах, которые скрипт перемещает или удаляет.
