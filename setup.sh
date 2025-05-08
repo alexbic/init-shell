@@ -35,7 +35,10 @@ sudo apt install -y git curl zsh
 if [ -d "$BASE_DIR" ]; then
   echo "🗂 Найдена предыдущая установка .myshell. Делаем резервную копию..."
   mkdir -p "$TMP_BACKUP_DIR"
-  rsync -a --exclude "backup" "$BASE_DIR/" "$TMP_BACKUP_DIR/"
+
+#  rsync -a --exclude "backup" "$BASE_DIR/" "$TMP_BACKUP_DIR/"
+# Перемещаем файлы, исключая директорию backup
+  find "$BASE_DIR" -mindepth 1 -not -path "$BASE_DIR/backup*" -exec mv -t "$TMP_BACKUP_DIR" {} +
 
   if [ ! -d "$BACKUP_DIR" ] || [ -z "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]; then
     echo "📁 Создаем директорию для резервных копий: $BACKUP_DIR"
