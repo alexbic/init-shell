@@ -70,9 +70,13 @@ else
   mkdir -p "$BASE_DIR" "$BACKUP_DIR"
   echo "📦 Переносим старые настройки..."
   for file in .zshrc .tmux.conf .tmux.conf.local; do
-    [[ -e "$HOME/$file" ]] && mv "$HOME/$file" "$TMP_BACKUP_DIR/" 2>/dev/null || true
+    if [[ -e "$HOME/$file" ]]; then
+      mv "$HOME/$file" "$TMP_BACKUP_DIR/" 2>/dev/null || true
+    fi
   done
-  [[ -d "$HOME/.oh-my-zsh" ]] && cp -a "$HOME/.oh-my-zsh" "$TMP_BACKUP_DIR/" || true
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    cp -a "$HOME/.oh-my-zsh" "$TMP_BACKUP_DIR/" || true
+  fi
 fi
 
 # 📦 Архивируем
@@ -82,7 +86,11 @@ rm -rf "$TMP_BACKUP_DIR"
 
 # 🧹 Чистим окружение
 echo -e "\033[33m🧹 Удаляем старые конфиги и симлинки...\033[0m"
-find "$HOME" -maxdepth 1 -type f \( -name ".zsh*" -o -name ".tmux*" \) -exec rm -f {} \; || true
+for file in .zsh* .tmux*; do
+  if [[ -e "$HOME/$file" ]]; then
+    rm -f "$HOME/$file"
+  fi
+done
 
 # 📥 Клонируем dotfiles
 echo -e "\033[34m📥 Клонируем dotfiles...\033[0m"
@@ -99,22 +107,22 @@ git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" || {
 }
 
 # ♻️ Удаляем старый Oh-My-Zsh
-[[ -d "$HOME/.oh-my-zsh" ]] && {
+if [[ -d "$HOME/.oh-my-zsh" ]]; then
   echo "♻️ Удаляем старый Oh-My-Zsh..."
   chmod +x "$HOME/.oh-my-zsh/tools/uninstall.sh" 2>/dev/null || true
   "$HOME/.oh-my-zsh/tools/uninstall.sh" || true
   rm -rf "$HOME/.oh-my-zsh"
-}
+fi
 
 # 📥 Установка нового Oh-My-Zsh
 echo -e "\033[34m📥 Устанавливаем Oh-My-Zsh...\033[0m"
 RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL "$GIT_OMZ_INSTALL_URL")"
 
 # Проверка установки
-[[ -d "$HOME/.oh-my-zsh" ]] || {
+if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   echo -e "\033[31m❌ Ошибка: Oh-My-Zsh не установлен.\033[0m"
   exit 1
-}
+fi
 
 # 🔁 Перемещение Oh-My-Zsh в BASE_DIR
 echo "🔁 Перемещаем Oh-My-Zsh в $BASE_DIR..."
