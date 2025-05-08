@@ -111,12 +111,29 @@ git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" || {
 }
 
 # ♻️ Удаляем старый Oh-My-Zsh
+#if [[ -d "$HOME/.oh-my-zsh" ]]; then
+#  echo "♻️ Удаляем старый Oh-My-Zsh..."
+#  chmod +x "$HOME/.oh-my-zsh/tools/uninstall.sh" 2>/dev/null || true
+#  "$HOME/.oh-my-zsh/tools/uninstall.sh" || true
+#  rm -rf "$HOME/.oh-my-zsh"
+#fi
+
+
+# ♻️ Удаляем старый Oh-My-Zsh, если он существует
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
   echo "♻️ Удаляем старый Oh-My-Zsh..."
-  chmod +x "$HOME/.oh-my-zsh/tools/uninstall.sh" 2>/dev/null || true
-  "$HOME/.oh-my-zsh/tools/uninstall.sh" || true
   rm -rf "$HOME/.oh-my-zsh"
+  # Проверим, удалось ли удалить каталог
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    echo -e "\033[31m❌ Не удалось удалить каталог .oh-my-zsh. Проверьте права доступа.\033[0m"
+    exit 1
+  else
+    echo "✅ Каталог .oh-my-zsh успешно удалён."
+  fi
+else
+  echo "🛠 Каталог .oh-my-zsh не найден, ничего удалять не нужно."
 fi
+
 
 # 📥 Установка нового Oh-My-Zsh
 echo -e "\033[34m📥 Устанавливаем Oh-My-Zsh...\033[0m"
