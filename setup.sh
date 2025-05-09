@@ -198,7 +198,7 @@ echo "🔁 Перемещаем Oh-My-Zsh в $BASE_DIR..."
 mkdir -p "$BASE_DIR/ohmyzsh"
 rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/"
 rm -rf "$HOME/.oh-my-zsh"
-ln -sfn "$BASE_DIR/ohmyzsh/.tmux.conf.local" "$HOME/.oh-my-zsh"
+ln -sfn "$BASE_DIR/ohmyzsh/" "$HOME/.oh-my-zsh"
 
 #----------------------------------------------------
 # 🧰 Проверка и установка ZShell по умолчанию
