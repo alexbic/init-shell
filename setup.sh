@@ -46,7 +46,7 @@ GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/to
 # 📦 Обновление и установка зависимостей (только если их нет)
 echo -e "\033[34m📦 Проверка и установка необходимых пакетов...\033[0m"
 NEEDED_PACKAGES=()
-for pkg in "$PACKAGES"; do
+for pkg in $PACKAGES; do
   if ! dpkg -s "$pkg" &>/dev/null; then
     NEEDED_PACKAGES+=("$pkg")
   fi
