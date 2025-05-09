@@ -37,6 +37,7 @@ BACKUP_DIR="$BASE_DIR/backup"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 TMP_BACKUP_DIR="/tmp/myshell_backup_$TIMESTAMP"
 ARCHIVE_NAME="backup_$TIMESTAMP.tar.gz"
+PACKAGES="git curl zsh vim"
 
 GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
 GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
@@ -45,7 +46,7 @@ GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/to
 # 📦 Обновление и установка зависимостей (только если их нет)
 echo -e "\033[34m📦 Проверка и установка необходимых пакетов...\033[0m"
 NEEDED_PACKAGES=()
-for pkg in git curl zsh; do
+for pkg in "$PACKAGES"; do
   if ! dpkg -s "$pkg" &>/dev/null; then
     NEEDED_PACKAGES+=("$pkg")
   fi
