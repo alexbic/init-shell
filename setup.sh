@@ -162,6 +162,7 @@ if [[ ! -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
 else
   echo "✅ PaperColor уже добавлен"
 fi
+ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
 
 echo -e "${BLUE}📥 Устанавливаем Oh-My-Zsh...${RESET}"
 RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL "$GIT_OMZ_INSTALL_URL")"
