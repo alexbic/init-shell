@@ -175,7 +175,7 @@ sudo chown -R "$USER":"$USER" "$BASE_DIR"
 ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
 
 # ⚙️ Настройка vim
-ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc
+ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc"
 
 # 📦 Плагины Zsh
 echo "📦 Устанавливаем плагины..."
