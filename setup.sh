@@ -196,9 +196,8 @@ ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
 
 echo "🔁 Перемещаем Oh-My-Zsh в $BASE_DIR..."
 mkdir -p "$BASE_DIR/ohmyzsh"
-mv -f "$HOME/.oh-my-zsh/"* "$BASE_DIR/ohmyzsh"
-mv -f "$HOME/.oh-my-zsh/".* "$BASE_DIR/ohmyzsh" 2>/dev/null
-#rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/"
+rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/"
+rm -rf "$HOME/.oh-my-zsh"
 ln -sfn "$BASE_DIR/ohmyzsh/.tmux.conf.local" "$HOME/.oh-my-zsh"
 
 #----------------------------------------------------
