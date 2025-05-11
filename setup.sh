@@ -464,13 +464,13 @@ mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR" || {
 }
 
 if [[ ! -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
-  echo "${BLUE}📥 Клонируем PaperColor тему...${RESET}"
+  echo -e "${BLUE}📥 Клонируем PaperColor тему...${RESET}"
   git clone "https://github.com/NLKNguyen/papercolor-theme.git" "$VIM_COLORS_DIR/papercolor-theme" || {
     echo -e "${YELLOW}⚠️ Ошибка при клонировании темы. Проверяем права доступа...${RESET}"
     sudo git clone "https://github.com/NLKNguyen/papercolor-theme.git" "$VIM_COLORS_DIR/papercolor-theme"
   }
 else
-  echo "✅ PaperColor уже добавлен"
+  echo -e "${GREEN}✅ PaperColor уже добавлен${RESET}"
 fi
 
 ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim" || {
@@ -542,7 +542,13 @@ fi
 # Обновляем владельца всех файлов и директорий
 echo -e "${BLUE}🛠️ Установка правильных прав доступа...${RESET}"
 sudo chown -R "$USER":"$USER" "$BASE_DIR"
-sudo chown -h "$USER":"$USER" "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local" 2>/dev/null
+
+# Проверяем, что символические ссылки существуют перед установкой прав
+for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
+  if [[ -L "$link" ]]; then
+    sudo chown -h "$USER":"$USER" "$link" 2>/dev/null
+  fi
+done
 
 #----------------------------------------------------
 # 🗑️ Очистка временной директории
