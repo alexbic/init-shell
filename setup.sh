@@ -363,9 +363,7 @@ install_ohmyzsh() {
     return 1
   }
   
-  # Создаем символическую ссылку
-  echo "  - Создаем символическую ссылку..."
-  ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" || sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
+  # Символическая ссылка будет создана позже в блоке настройки окружения
   
   echo -e "${GREEN}✅ Oh-My-Zsh успешно установлен${RESET}"
   return 0
@@ -511,6 +509,12 @@ ln -sfn "$VIM_DIR" "$HOME/.vim" || sudo ln -sfn "$VIM_DIR" "$HOME/.vim"
 echo "⚙️ Настраиваем tmux..."
 ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" || sudo ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
 ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local" || sudo ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
+
+echo "⚙️ Настраиваем Oh-My-Zsh..."
+ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
+  sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
+}
 
 # Удаляем блок перемещения Oh-My-Zsh, так как теперь установка происходит напрямую в окружение
 
