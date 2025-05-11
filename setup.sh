@@ -509,7 +509,7 @@ mkdir -p "$BASE_DIR/ohmyzsh" || sudo mkdir -p "$BASE_DIR/ohmyzsh"
 if ! rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/" 2>/dev/null; then
   echo -e "${YELLOW}⚠️ Проблемы с правами при rsync. Используем sudo...${RESET}"
   sudo rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/"
-}
+fi
 
 # Удаляем директорию с проверкой прав
 rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm -rf "$HOME/.oh-my-zsh"
