@@ -329,33 +329,22 @@ fi
 
 # Функция для установки Oh-My-Zsh
 install_ohmyzsh() {
-  echo -e "${BLUE}📥 Устанавливаем Oh-My-Zsh...${RESET}"
+  echo -e "${BLUE}📥 Подготовка к установке Oh-My-Zsh...${RESET}"
   
-  # Проверяем, существует ли директория или ссылка .oh-my-zsh
+  # Удаляем предыдущую установку, если она существует
   if [[ -e "$HOME/.oh-my-zsh" ]]; then
+    echo -e "${YELLOW}🧹 Удаляем предыдущую установку Oh-My-Zsh${RESET}"
     if [[ -L "$HOME/.oh-my-zsh" ]]; then
-      echo -e "${YELLOW}⚠️ Обнаружена символическая ссылка .oh-my-zsh, проверяем цель...${RESET}"
-      # Проверяем, указывает ли ссылка на нашу установку
-      target=$(readlink -f "$HOME/.oh-my-zsh")
-      if [[ "$target" == "$BASE_DIR/ohmyzsh" || "$target" == "$BASE_DIR/ohmyzsh/" ]]; then
-        echo -e "${YELLOW}⚠️ Ссылка указывает на нашу установку, временно удаляем только ссылку...${RESET}"
-        rm "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm "$HOME/.oh-my-zsh"
-      else
-        echo -e "${YELLOW}⚠️ Ссылка указывает на внешнюю директорию, удаляем...${RESET}"
-        rm "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm "$HOME/.oh-my-zsh"
-        # Если цель ссылки существует и это директория, удаляем и её
-        if [[ -d "$target" ]]; then
-          echo -e "${YELLOW}⚠️ Удаляем цель ссылки: $target${RESET}"
-          rm -rf "$target" 2>/dev/null || sudo rm -rf "$target"
-        fi
-      fi
+      echo "  - Удаляем символическую ссылку: $HOME/.oh-my-zsh"
+      rm -f "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm -f "$HOME/.oh-my-zsh"
     else
-      echo -e "${YELLOW}⚠️ Обнаружена директория .oh-my-zsh, удаляем...${RESET}"
+      echo "  - Удаляем директорию: $HOME/.oh-my-zsh"
       rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm -rf "$HOME/.oh-my-zsh"
     fi
   fi
   
   # Устанавливаем Oh-My-Zsh
+  echo -e "${BLUE}📥 Устанавливаем Oh-My-Zsh...${RESET}"
   RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL "$GIT_OMZ_INSTALL_URL")"
   
   if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
@@ -363,6 +352,7 @@ install_ohmyzsh() {
     return 1
   fi
   
+  echo -e "${GREEN}✅ Oh-My-Zsh успешно установлен${RESET}"
   return 0
 }
 
