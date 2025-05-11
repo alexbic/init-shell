@@ -505,20 +505,17 @@ ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local" || sudo ln
 echo "🔁 Перемещаем Oh-My-Zsh в $BASE_DIR..."
 mkdir -p "$BASE_DIR/ohmyzsh" || sudo mkdir -p "$BASE_DIR/ohmyzsh"
 
-# Проверяем права на rsync
-if ! rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/" 2>/dev/null; then
-  echo -e "${YELLOW}⚠️ Проблемы с правами при rsync. Используем sudo...${RESET}"
-  sudo rsync -a --remove-source-files "$HOME/.oh-my-zsh/" "$BASE_DIR/ohmyzsh/"
-fi
+# Перемещаем содержимое Oh-My-Zsh напрямую с помощью cp вместо rsync
+echo "  - Копируем содержимое Oh-My-Zsh..."
+cp -a "$HOME/.oh-my-zsh/." "$BASE_DIR/ohmyzsh/" || sudo cp -a "$HOME/.oh-my-zsh/." "$BASE_DIR/ohmyzsh/"
 
-# Удаляем директорию с проверкой прав
-rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm -rf "$HOME/.oh-my-zsh"
+# Удаляем оригинальную директорию
+echo "  - Удаляем оригинальную директорию..."
+rm -rf "$HOME/.oh-my-zsh" || sudo rm -rf "$HOME/.oh-my-zsh"
 
-# Создаем символическую ссылку с проверкой прав
-ln -sfn "$BASE_DIR/ohmyzsh/" "$HOME/.oh-my-zsh" || {
-  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
-  sudo ln -sfn "$BASE_DIR/ohmyzsh/" "$HOME/.oh-my-zsh"
-}
+# Создаем символическую ссылку
+echo "  - Создаем символическую ссылку..."
+ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" || sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
 
 #----------------------------------------------------
 # 🧰 Проверка и установка ZShell по умолчанию
