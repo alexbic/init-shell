@@ -36,6 +36,7 @@ PACKAGES="git curl zsh vim"
 # 🔗 Git-репозитории
 GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
 GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
+GIT_OMZ_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
 
 #----------------------------------------------------
@@ -335,22 +336,40 @@ install_ohmyzsh() {
   if [[ -e "$HOME/.oh-my-zsh" ]]; then
     echo -e "${YELLOW}🧹 Удаляем предыдущую установку Oh-My-Zsh${RESET}"
     if [[ -L "$HOME/.oh-my-zsh" ]]; then
-      echo "  - Удаляем символическую ссылку: $HOME/.oh-my-zsh"
-      rm -f "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm -f "$HOME/.oh-my-zsh"
+      echo "  - Обнаружена символическая ссылка: $HOME/.oh-my-zsh"
+      # Более надежное удаление символической ссылки с проверкой результата
+      /bin/ls -la "$HOME/.oh-my-zsh" # Выводим информацию о ссылке для диагностики
+      
+      echo "  - Пробуем удалить обычным способом..."
+      rm "$HOME/.oh-my-zsh" || {
+        echo "  - Не удалось, пробуем удалить через sudo..."
+        sudo rm "$HOME/.oh-my-zsh" || {
+          echo "  - И это не помогло, пробуем принудительное удаление через unlink..."
+          unlink "$HOME/.oh-my-zsh" 2>/dev/null || sudo unlink "$HOME/.oh-my-zsh" 2>/dev/null || {
+            echo -e "${RED}❌ Все методы удаления ссылки не удались. Попробуем последний способ...${RESET}"
+            sudo find "$HOME" -maxdepth 1 -name ".oh-my-zsh" -delete
+          }
+        }
+      }
     else
       echo "  - Удаляем директорию: $HOME/.oh-my-zsh"
       rm -rf "$HOME/.oh-my-zsh" 2>/dev/null || sudo rm -rf "$HOME/.oh-my-zsh"
     fi
   fi
   
-  # Устанавливаем Oh-My-Zsh
-  echo -e "${BLUE}📥 Устанавливаем Oh-My-Zsh...${RESET}"
-  RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL "$GIT_OMZ_INSTALL_URL")"
-  
-  if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
-    echo -e "${RED}❌ Ошибка: Oh-My-Zsh не установлен.${RESET}"
+  # Проверяем еще раз, что директория или ссылка удалена
+  if [[ -e "$HOME/.oh-my-zsh" ]]; then
+    echo -e "${RED}❌ Все попытки удалить .oh-my-zsh не удались! Выходим с ошибкой.${RESET}"
+    echo -e "${YELLOW}⚠️ Рекомендация: удалите вручную симлинк или директорию: $HOME/.oh-my-zsh${RESET}"
     return 1
   fi
+  
+  # Устанавливаем Oh-My-Zsh вручную, клонируя репозиторий
+  echo -e "${BLUE}📥 Клонируем репозиторий Oh-My-Zsh...${RESET}"
+  git clone --depth=1 "$GIT_OMZ_REPO" "$HOME/.oh-my-zsh" || {
+    echo -e "${RED}❌ Ошибка при клонировании репозитория Oh-My-Zsh${RESET}"
+    return 1
+  }
   
   echo -e "${GREEN}✅ Oh-My-Zsh успешно установлен${RESET}"
   return 0
