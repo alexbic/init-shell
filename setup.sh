@@ -1248,35 +1248,32 @@ fi
 # 🏁 Финальное сообщение
 #----------------------------------------------------
 
-# Определяем ширину для рамок (такую же, как для операций)
-FRAME_WIDTH=80
-
-# Создаем строки рамки
-HORIZONTAL_LINE=$(printf '%*s' $FRAME_WIDTH | tr ' ' '─')
-EMPTY_LINE="${RESET}│$(printf '%*s' $((FRAME_WIDTH-2)) )│${RESET}"
+# Простая функция для центрирования текста
+center_text() {
+  local text="$1"
+  local width=80
+  local padding=$(( (width - ${#text}) / 2 ))
+  printf "%${padding}s%s%${padding}s\n" "" "$text" ""
+}
 
 # Красивое завершение
 echo ""
-echo -e "${GREEN}╭${HORIZONTAL_LINE}╮${RESET}"
-echo -e "${GREEN}│$(printf '%*s' $(((FRAME_WIDTH-2)/2 - 13)) )🎉  Установка завершена успешно!  🎉$(printf '%*s' $(((FRAME_WIDTH-2)/2 - 13)) )│${RESET}"
-echo -e "${GREEN}╰${HORIZONTAL_LINE}╯${RESET}"
+echo -e "${GREEN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
+center_text "${GREEN}🎉  Установка завершена успешно!  🎉${RESET}"
+echo -e "${GREEN}└────────────────────────────────────────────────────────────────────┘${RESET}"
 echo ""
 
 # Инструкции для пользователя и приглашение в одной рамке
-echo -e "${BLUE}╭${HORIZONTAL_LINE}╮${RESET}"
-echo -e "${BLUE}│  ℹ️  Чтобы изменения вступили в силу:$(printf '%*s' $((FRAME_WIDTH-41)) )│${RESET}"
-echo -e "${BLUE}│$(printf '%*s' $((FRAME_WIDTH-2)) )│${RESET}"
-echo -e "${BLUE}│  • Перезапустите терминал$(printf '%*s' $((FRAME_WIDTH-28)) )│${RESET}"
-echo -e "${BLUE}│             или$(printf '%*s' $((FRAME_WIDTH-19)) )│${RESET}"
-echo -e "${BLUE}│  • Выполните команду: ${CYAN}exec zsh${BLUE}$(printf '%*s' $((FRAME_WIDTH-33)) )│${RESET}"
-echo -e "${BLUE}│$(printf '%*s' $((FRAME_WIDTH-2)) )│${RESET}"
-echo -en "${BLUE}│  🚀 Хотите перейти в Zsh прямо сейчас? (y/n): ${RESET}"
-
-# Читаем ответ внутри той же рамки
+echo -e "${BLUE}┌────────────────────────────────────────────────────────────────────┐${RESET}"
+echo -e "${BLUE}│  ℹ️  Чтобы изменения вступили в силу:                               │${RESET}"
+echo -e "${BLUE}│                                                                    │${RESET}"
+echo -e "${BLUE}│  • Перезапустите терминал                                          │${RESET}"
+echo -e "${BLUE}│             или                                                    │${RESET}"
+echo -e "${BLUE}│  • Выполните команду: ${CYAN}exec zsh${BLUE}                                  │${RESET}"
+echo -e "${BLUE}│                                                                    │${RESET}"
+echo -e "${BLUE}│  🚀 Хотите перейти в Zsh прямо сейчас? (y/n): ${RESET}"
 read switch_to_zsh
-
-# Завершаем рамку
-echo -e "${BLUE}╰${HORIZONTAL_LINE}╯${RESET}"
+echo -e "${BLUE}└────────────────────────────────────────────────────────────────────┘${RESET}"
 echo ""
 
 if [[ "$switch_to_zsh" =~ ^[Yy]$ ]]; then
