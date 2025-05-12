@@ -246,7 +246,7 @@ show_menu() {
 # Форматирование с дополнительной линией над стрелочкой
 echo -e "\n${GREEN}╭─── ${CYAN}$(get_action_description)${RESET}"
 echo -e "${GREEN}│${RESET}"
-echo -e "${GREEN}╰───▶  Продолжить? (y/n): ${RESET}"
+echo -e "${GREEN}╰───  ▶ Продолжить? (y/n): ${RESET}"
 read confirm
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
