@@ -1557,7 +1557,7 @@ show_menu() {
     echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
     
     # В зависимости от действия, добавляем разные блоки информации в рамку
-    case $ACTION in
+case $ACTION in
       "update") 
         echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
         IFS=$'\n'
@@ -2006,7 +2006,7 @@ else
           fi
         elif [[ -f "$src" ]]; then
           # Если это обычный файл
-if [[ -s "$src" ]]; then  # Проверка на непустой файл
+     if [[ -s "$src" ]]; then  # Проверка на непустой файл
             if ! cp -p "$src" "$dst"; then
               if sudo cp -p "$src" "$dst"; then
                 print_operation "Копирование файла: $src" "успешно" "GREEN"
@@ -2518,5 +2518,6 @@ else
 fi
 
             
+        
 
       
