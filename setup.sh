@@ -241,13 +241,10 @@ show_menu() {
     fi
     
     # Подтверждение выбора
-    #echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
-    #read -p "    Продолжить? (y/n): " confirm
-# Форматирование с дополнительной линией над стрелочкой
-echo -e "\n${GREEN}╭─── ${CYAN}$(get_action_description)${RESET}"
-echo -e "${GREEN}│${RESET}"
-echo -en "${GREEN}╰─── ▶  Продолжить? (y/n): ${RESET}"
-read confirm
+    echo -e "\n${GREEN}╭─── ${CYAN}$(get_action_description)${RESET}"
+    echo -e "${GREEN}│${RESET}"
+    echo -en "${GREEN}╰─── ▶  Продолжить? (y/n): ${RESET}"
+    read confirm
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
       clear
@@ -255,7 +252,7 @@ read confirm
       break
     else
       # Возвращаемся в меню
-      echo -e "\n${YELLOW}⚠️ Действие отменено, возврат в меню...${RESET}"
+      echo -e "\n${YELLOW}⚠️  Действие отменено, возврат в меню...${RESET}"
       sleep 1
       continue
     fi
