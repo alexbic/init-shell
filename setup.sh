@@ -241,8 +241,17 @@ show_menu() {
     fi
     
     # Подтверждение выбора
-    echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
-    read -p "    Продолжить? (y/n): " confirm
+    #echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
+    #read -p "    Продолжить? (y/n): " confirm
+
+
+# Минималистичное форматирование подтверждения
+echo -e "\n${BLUE}╭── ${CYAN}Подтверждение${RESET}"
+echo -e "${BLUE}│${RESET}"
+echo -e "${BLUE}│  ${CYAN}$(get_action_description)${RESET}"
+echo -e "${BLUE}╰──${RESET}"
+read -p "${GREEN}▶ Продолжить? (y/n): ${RESET}" confirm
+    
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
       clear
