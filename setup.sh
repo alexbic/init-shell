@@ -1052,20 +1052,18 @@ update_or_clone_repo() {
       print_operation "Проверка $repo_name" "актуальная версия" "GREEN"
     else
       # Если есть изменения, пытаемся обновить
-      print_operation "Обновление $repo_name" "обновляется" "CYAN"
       if ! (cd "$target_dir" && git pull -q); then
         if sudo -u "$USER" git -C "$target_dir" pull -q; then
-          print_operation "Обновление $repo_name с sudo" "обновлено" "CYAN"
+          print_operation "Обновление $repo_name" "успешно" "CYAN"
         else
           print_operation "Обновление $repo_name" "ошибка" "RED"
         fi
       else
-        print_operation "Обновление $repo_name" "обновлено" "CYAN"
+        print_operation "Обновление $repo_name" "успешно" "CYAN"
       fi
     fi
   else
     # Директория не существует или не является git-репозиторием, клонируем
-    print_operation "Клонирование $repo_name" "начато" "CYAN"
     
     # Если директория существует, но не является git-репозиторием, удаляем её
     if [[ -d "$target_dir" ]]; then
@@ -1073,10 +1071,10 @@ update_or_clone_repo() {
     fi
     
     if git clone -q "$repo_url" "$target_dir"; then
-      print_operation "Клонирование $repo_name" "завершено" "CYAN"
+      print_operation "Клонирование $repo_name" "успешно" "CYAN"
     else
       if sudo git clone -q "$repo_url" "$target_dir"; then
-        print_operation "Клонирование $repo_name с sudo" "завершено" "CYAN"
+        print_operation "Клонирование $repo_name" "успешно" "CYAN"
       else
         print_operation "Клонирование $repo_name" "ошибка" "RED"
       fi
