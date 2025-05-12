@@ -244,9 +244,8 @@ show_menu() {
     #echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
     #read -p "    Продолжить? (y/n): " confirm
 # Форматирование с дополнительной линией над стрелочкой
-echo -e "\n${GREEN}╭─── ${CYAN}Подтверждение${RESET}"
+echo -e "\n${GREEN}╭─── ${CYAN}$(get_action_description)${RESET}"
 echo -e "${GREEN}│${RESET}"
-echo -e "${GREEN}│    ${CYAN}$(get_action_description)${RESET}"
 echo -e "${GREEN}│${RESET}"
 echo -e "${GREEN}╰───▶ Продолжить? (y/n): ${RESET}"
 read confirm
