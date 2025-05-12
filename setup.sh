@@ -1223,8 +1223,7 @@ fi
 # Обновляем или клонируем zsh-autosuggestions
 update_or_clone_repo "$GIT_ZSH_AUTOSUGGESTIONS_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions"
 
-# Обновляем или клонируем zsh-syntax-highlighting
-update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax
+# Обновляем или клонируем zsh-syntax-highlighting zsh-syntax-highlighting
 update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
 
 #----------------------------------------------------
