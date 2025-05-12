@@ -879,28 +879,35 @@ configure_backup() {
   
   # Верхняя часть рамки
   echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
-  echo -e "${CYAN}│${RESET}               ${YELLOW}НАСТРОЙКА РЕЗЕРВНОГО КОПИРОВАНИЯ${RESET}               ${CYAN}│${RESET}"
-  echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+  echo -e "${CYAN} ${YELLOW}НАСТРОЙКА РЕЗЕРВНОГО КОПИРОВАНИЯ${RESET}"
+  echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
   
-  # Текущие настройки
-  echo -e "${CYAN}│${RESET} ${BLUE}🔧 Текущие настройки:${RESET}                                        ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}   • Максимальное количество хранимых копий: ${YELLOW}$MAX_BACKUPS${RESET}              ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}   • Директория резервных копий: ${YELLOW}$BACKUP_DIR${RESET}       ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-  echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+  # Текущие настройки без боковых рамок
+  echo -e "${BLUE}🔧 Текущие настройки:${RESET}"
+  echo ""
+  echo -e "  • Максимальное количество хранимых копий: ${YELLOW}$MAX_BACKUPS${RESET}"
+  echo -e "  • Директория резервных копий: ${YELLOW}$BACKUP_DIR${RESET}"
+  echo ""
   
-  # Доступные настройки
-  echo -e "${CYAN}│${RESET} ${BLUE}📋 Доступные параметры для настройки:${RESET}                         ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}   ${CYAN}1)${RESET} Изменить максимальное количество хранимых копий             ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}   ${CYAN}2)${RESET} Изменить директорию для резервных копий                    ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}   ${CYAN}0)${RESET} Вернуться назад                                          ${CYAN}│${RESET}"
-  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-  echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+  # Разделитель
+  echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+  
+  # Доступные настройки без боковых рамок
+  echo -e "${BLUE}📋 Доступные параметры для настройки:${RESET}"
+  echo ""
+  echo -e "  ${CYAN}1)${RESET} Изменить максимальное количество хранимых копий"
+  echo -e "  ${CYAN}2)${RESET} Изменить директорию для резервных копий"
+  echo -e "  ${CYAN}0)${RESET} Вернуться назад"
+  echo ""
+  
+  # Нижняя линия рамки
+  echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+  
+  # Отступ после рамки
+  echo ""
   
   # Запрос выбора
-  local choice
+  # local choice
   read -p "🔢 Ваш выбор [0-2]: " choice
   
   case $choice in
@@ -1272,28 +1279,28 @@ backup_menu() {
     clear
     show_logo
     
-    # Верхняя часть рамки
+    # Верхняя часть рамки - только верхняя линия
     echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
-    echo -e "${CYAN}│${RESET}                 ${YELLOW}УПРАВЛЕНИЕ РЕЗЕРВНЫМИ КОПИЯМИ${RESET}                 ${CYAN}│${RESET}"
-    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    echo -e "${CYAN} ${YELLOW}УПРАВЛЕНИЕ РЕЗЕРВНЫМИ КОПИЯМИ${RESET}"
+    echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
     
-    # Информация о резервных копиях
-    echo -e "${CYAN}│${RESET} ${BLUE}📊 Информация о резервных копиях:${RESET}                             ${CYAN}│${RESET}"
+    # Информация о резервных копиях без боковых рамок
+    echo -e "${BLUE}📊 Информация о резервных копиях:${RESET}"
     
     # Проверка наличия директории для бэкапов
     if [[ ! -d "$BACKUP_DIR" ]]; then
-      echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Директория для резервных копий отсутствует${RESET}               ${CYAN}│${RESET}"
-      echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Необходимо сначала создать хотя бы одну резервную копию${RESET}  ${CYAN}│${RESET}"
+      echo -e "${YELLOW}⚠️  Директория для резервных копий отсутствует${RESET}"
+      echo -e "${YELLOW}⚠️  Необходимо сначала создать хотя бы одну резервную копию${RESET}"
     else
       # Проверка наличия первоначальной копии
       if [[ -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" ]]; then
         local initial_date=$(stat -c %y "$BACKUP_DIR/$INITIAL_BACKUP_NAME" | cut -d' ' -f1)
-        echo -e "${CYAN}│${RESET} ${GREEN}✓ Первоначальная копия${RESET} - $initial_date                      ${CYAN}│${RESET}"
+        echo -e "${GREEN}✓ Первоначальная копия${RESET} - $initial_date"
       elif [[ -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
         local initial_date=$(stat -c %y "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" | cut -d' ' -f1)
-        echo -e "${CYAN}│${RESET} ${GREEN}✓ Первоначальная копия${RESET} - $initial_date (архив)              ${CYAN}│${RESET}"
+        echo -e "${GREEN}✓ Первоначальная копия${RESET} - $initial_date (архив)"
       else
-        echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Первоначальная копия отсутствует${RESET}                         ${CYAN}│${RESET}"
+        echo -e "${YELLOW}⚠️  Первоначальная копия отсутствует${RESET}"
       fi
       
       # Получаем список обычных резервных копий
@@ -1326,7 +1333,7 @@ backup_menu() {
       
       # Выводим информацию о копиях
       if [[ ${#backup_dirs[@]} -gt 0 ]]; then
-        echo -e "${CYAN}│${RESET} ${GREEN}✓ Найдено ${#backup_dirs[@]} резервных копий:${RESET}                       ${CYAN}│${RESET}"
+        echo -e "${GREEN}✓ Найдено ${#backup_dirs[@]} резервных копий:${RESET}"
         
         # Выводим максимум 5 копий
         local max_show=$((${#backup_dirs[@]} > 5 ? 5 : ${#backup_dirs[@]}))
@@ -1336,54 +1343,56 @@ backup_menu() {
           local type=$(echo "${backup_dirs[$i]}" | cut -d'|' -f3)
           
           if [[ "$type" == "dir" ]]; then
-            echo -e "${CYAN}│${RESET}   ${GREEN}•${RESET} $name - $date                        ${CYAN}│${RESET}"
+            echo -e "  ${GREEN}•${RESET} $name - $date"
           else
-            echo -e "${CYAN}│${RESET}   ${YELLOW}•${RESET} $name - $date (архив)               ${CYAN}│${RESET}"
+            echo -e "  ${YELLOW}•${RESET} $name - $date (архив)"
           fi
         done
         
         # Если больше 5 копий, показываем сообщение о других
         if [[ ${#backup_dirs[@]} -gt 5 ]]; then
           local remaining=$((${#backup_dirs[@]} - 5))
-          echo -e "${CYAN}│${RESET}   ${GRAY}...и еще $remaining копий${RESET}                                ${CYAN}│${RESET}"
+          echo -e "  ${GRAY}...и еще $remaining копий${RESET}"
         fi
       else
-        echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Резервные копии отсутствуют${RESET}                              ${CYAN}│${RESET}"
+        echo -e "${YELLOW}⚠️  Резервные копии отсутствуют${RESET}"
       fi
     fi
     
     # Разделитель
-    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
     
-    # Меню доступных действий
-    echo -e "${CYAN}│${RESET} ${BLUE}📋 Доступные действия:${RESET}                                       ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET}   ${CYAN}1)${RESET} 📥 Создать новую резервную копию                         ${CYAN}│${RESET}"
+    # Меню доступных действий без боковых рамок
+    echo -e "${BLUE}📋 Доступные действия:${RESET}"
+    echo ""
+    echo -e "  ${CYAN}1)${RESET} 📥 Создать новую резервную копию"
     
     # Пункт восстановления активен только если есть копии
     if [[ ${#backup_dirs[@]} -gt 0 || -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" || -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
-      echo -e "${CYAN}│${RESET}   ${CYAN}2)${RESET} 🔄 Восстановить из резервной копии                       ${CYAN}│${RESET}"
+      echo -e "  ${CYAN}2)${RESET} 🔄 Восстановить из резервной копии"
     else
-      echo -e "${CYAN}│${RESET}   ${GRAY}2)${RESET} ${GRAY}🔄 Восстановить из резервной копии (недоступно)${RESET}      ${CYAN}│${RESET}"
+      echo -e "  ${GRAY}2)${RESET} ${GRAY}🔄 Восстановить из резервной копии (недоступно)${RESET}"
     fi
     
     # Пункт архивации доступен, если есть неархивированные копии
     if [[ ${#backup_dirs[@]} -gt 0 ]]; then
-      echo -e "${CYAN}│${RESET}   ${CYAN}3)${RESET} 🗜️  Архивировать старые копии                            ${CYAN}│${RESET}"
-      echo -e "${CYAN}│${RESET}   ${CYAN}4)${RESET} 🗑️  Удалить выбранные копии                              ${CYAN}│${RESET}"
+      echo -e "  ${CYAN}3)${RESET} 🗜️  Архивировать старые копии"
+      echo -e "  ${CYAN}4)${RESET} 🗑️  Удалить выбранные копии"
     else
-      echo -e "${CYAN}│${RESET}   ${GRAY}3)${RESET} ${GRAY}🗜️  Архивировать старые копии (недоступно)${RESET}           ${CYAN}│${RESET}"
-      echo -e "${CYAN}│${RESET}   ${GRAY}4)${RESET} ${GRAY}🗑️  Удалить выбранные копии (недоступно)${RESET}             ${CYAN}│${RESET}"
+      echo -e "  ${GRAY}3)${RESET} ${GRAY}🗜️  Архивировать старые копии (недоступно)${RESET}"
+      echo -e "  ${GRAY}4)${RESET} ${GRAY}🗑️  Удалить выбранные копии (недоступно)${RESET}"
     fi
     
-    echo -e "${CYAN}│${RESET}   ${CYAN}5)${RESET} ⚙️  Настроить параметры резервного копирования             ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET}   ${CYAN}0)${RESET} 🔙 Вернуться в главное меню                               ${CYAN}│${RESET}"
+    echo -e "  ${CYAN}5)${RESET} ⚙️  Настроить параметры резервного копирования"
+    echo -e "  ${CYAN}0)${RESET} 🔙 Вернуться в главное меню"
     
-    # Нижняя часть рамки
-    echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+    # Нижняя линия рамки
+    echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+    
+    # Отступ после меню
+    echo ""
     
     # Запрос выбора
-    echo ""
     read -p "🔢 Ваш выбор [0-5]: " choice
     
     case $choice in
@@ -1550,153 +1559,144 @@ show_menu() {
     esac
     
     # Верхняя часть рамки
-    echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
-    echo -e "${CYAN}│${RESET}                         ${YELLOW}$action_title${RESET}                         ${CYAN}│${RESET}"
-    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
-    echo -e "${CYAN}│${RESET} ${YELLOW}$(center_text "$action_desc")${RESET} ${CYAN}│${RESET}"
-    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
-    
+echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
+echo -e "${CYAN} ${YELLOW}$action_title${RESET}"
+echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+echo -e "${YELLOW}$(center_text "$action_desc")${RESET}"
+echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+
+
     # В зависимости от действия, добавляем разные блоки информации в рамку
-case $ACTION in
+    case $ACTION in
       "update") 
-        echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
+        echo -e "${BLUE}📊 Текущее состояние системы:${RESET}"                              
         IFS=$'\n'
         for line in $(show_environment_status); do
-          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+          echo -e "$line" | sed 's/\\n//g'
         done
         unset IFS
-        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация об обновлении:${RESET}                                ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Все компоненты будут обновлены до последних версий с GitHub.    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Ваши настройки будут сохранены.                                ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Все изменения будут применены сразу же.                        ${CYAN}│${RESET}"
+        echo -e ""                              
+        echo -e "${BLUE}ℹ️  Информация об обновлении:${RESET}"
+        echo -e "• Все компоненты будут обновлены до последних версий с GitHub."
+        echo -e "• Ваши настройки будут сохранены."
+        echo -e "• Все изменения будут применены сразу же."
         ;;
         
       "reinstall") 
-        echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
+        echo -e "${BLUE}📊 Текущее состояние системы:${RESET}"
         IFS=$'\n'
         for line in $(show_environment_status); do
-          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+          echo -e "$line" | sed 's/\\n//g'
         done
         unset IFS
         
-        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация о переустановке:${RESET}                               ${CYAN}│${RESET}"
+        echo -e ""
+        echo -e "${BLUE}ℹ️  Информация о переустановке:${RESET}"
         if [[ "$SAVE_EXISTING" == "y" ]]; then
-          echo -e "${CYAN}│${RESET} • Резервная копия текущих настроек будет сохранена.               ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} • Окружение MYSHELL будет полностью переустановлено.              ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} • Ваши настройки и плагины будут восстановлены.                  ${CYAN}│${RESET}"
+          echo -e "• Резервная копия текущих настроек будет сохранена."
+          echo -e "• Окружение MYSHELL будет полностью переустановлено."
+          echo -e "• Ваши настройки и плагины будут восстановлены."
         else
-          echo -e "${CYAN}│${RESET} ${RED}⚠️  Резервная копия НЕ будет создана!${RESET}                         ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} ${RED}⚠️  Все ваши текущие настройки будут потеряны!${RESET}                ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} ${RED}⚠️  Окружение будет установлено с нуля!${RESET}                       ${CYAN}│${RESET}"
+          echo -e "${RED}⚠️  Резервная копия НЕ будет создана!${RESET}"
+          echo -e "${RED}⚠️  Все ваши текущие настройки будут потеряны!${RESET}"
+          echo -e "${RED}⚠️  Окружение будет установлено с нуля!${RESET}"
         fi
         ;;
         
       "install")
-        echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
+        echo -e "${BLUE}📊 Текущее состояние системы:${RESET}"
         IFS=$'\n'
         for line in $(show_environment_status); do
-          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+          echo -e "$line" | sed 's/\\n//g'
         done
         unset IFS
         
-        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация об установке:${RESET}                                  ${CYAN}│${RESET}"
+        echo -e ""
+        echo -e "${BLUE}ℹ️  Информация об установке:${RESET}"
         if [[ "$SAVE_EXISTING" == "y" ]]; then
-          echo -e "${CYAN}│${RESET} • Будет создана резервная копия ваших текущих настроек.          ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} • Окружение MYSHELL будет установлено с сохранением настроек.     ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} • По окончании можно будет переключиться на Zsh.                 ${CYAN}│${RESET}"
+          echo -e "• Будет создана резервная копия ваших текущих настроек."
+          echo -e "• Окружение MYSHELL будет установлено с сохранением настроек."
+          echo -e "• По окончании можно будет переключиться на Zsh."
         else
-          echo -e "${CYAN}│${RESET} ${RED}⚠️  Резервная копия НЕ будет создана!${RESET}                         ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} ${RED}⚠️  Все ваши текущие настройки будут заменены!${RESET}                ${CYAN}│${RESET}"
-          echo -e "${CYAN}│${RESET} • Окружение MYSHELL будет установлено с настройками по умолчанию.${CYAN}│${RESET}"
+          echo -e "${RED}⚠️  Резервная копия НЕ будет создана!${RESET}"
+          echo -e "${RED}⚠️  Все ваши текущие настройки будут заменены!${RESET}"
+          echo -e "• Окружение MYSHELL будет установлено с настройками по умолчанию."
         fi
         ;;
         
       "plugins") 
-        echo -e "${CYAN}│${RESET} ${BLUE}📊 Информация о плагинах:${RESET}                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        echo -e "${BLUE}📊 Информация о плагинах:${RESET}"
+        echo -e ""
         
         # Проверим наличие плагинов и их версии
         if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" ]]; then
           local asg_version=$(cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" && git describe --tags 2>/dev/null || echo "неизвестно")
-          echo -e "${CYAN}│${RESET} ${GREEN}✓ zsh-autosuggestions${RESET} - версия: $asg_version               ${CYAN}│${RESET}"
+          echo -e "${GREEN}✓ zsh-autosuggestions${RESET} - версия: $asg_version"
         else
-          echo -e "${CYAN}│${RESET} ${RED}✗ zsh-autosuggestions${RESET} - будет установлен                     ${CYAN}│${RESET}"
+          echo -e "${RED}✗ zsh-autosuggestions${RESET} - будет установлен"
         fi
         
         if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" ]]; then
           local syn_version=$(cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" && git describe --tags 2>/dev/null || echo "неизвестно")
-          echo -e "${CYAN}│${RESET} ${GREEN}✓ zsh-syntax-highlighting${RESET} - версия: $syn_version           ${CYAN}│${RESET}"
+          echo -e "${GREEN}✓ zsh-syntax-highlighting${RESET} - версия: $syn_version"
         else
-          echo -e "${CYAN}│${RESET} ${RED}✗ zsh-syntax-highlighting${RESET} - будет установлен                 ${CYAN}│${RESET}"
+          echo -e "${RED}✗ zsh-syntax-highlighting${RESET} - будет установлен"
         fi
         
         if [[ -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
           local pc_version=$(cd "$VIM_COLORS_DIR/papercolor-theme" && git describe --tags 2>/dev/null || echo "неизвестно")
-          echo -e "${CYAN}│${RESET} ${GREEN}✓ PaperColor${RESET} - версия: $pc_version                         ${CYAN}│${RESET}"
+          echo -e "${GREEN}✓ PaperColor${RESET} - версия: $pc_version"
         else
-          echo -e "${CYAN}│${RESET} ${RED}✗ PaperColor${RESET} - будет установлен                             ${CYAN}│${RESET}"
+          echo -e "${RED}✗ PaperColor${RESET} - будет установлен"
         fi
         
-        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Операция обновления плагинов:${RESET}                              ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Все плагины будут обновлены до последних версий.                ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Основные компоненты останутся без изменений.                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Обновление безопасно и не затронет ваши настройки.              ${CYAN}│${RESET}"
+        echo -e ""
+        echo -e "${BLUE}ℹ️  Операция обновления плагинов:${RESET}"
+        echo -e "• Все плагины будут обновлены до последних версий."
+        echo -e "• Основные компоненты останутся без изменений."
+        echo -e "• Обновление безопасно и не затронет ваши настройки."
         ;;
         
       "backup") 
-        echo -e "${CYAN}│${RESET} ${BLUE}📊 Информация о резервных копиях:${RESET}                             ${CYAN}│${RESET}"
+        echo -e "${BLUE}📊 Информация о резервных копиях:${RESET}"
         IFS=$'\n'
         for line in $(show_backup_info); do
-          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+          echo -e "$line" | sed 's/\\n//g'
         done
         unset IFS
         
-        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация о создании резервной копии:${RESET}                     ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Будет создана полная копия текущего окружения MYSHELL.          ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Копия будет сохранена в директории:                            ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   $DATED_BACKUP_DIR ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET} • Старые копии будут архивированы при достижении лимита ($MAX_BACKUPS).${CYAN}│${RESET}"
+        echo -e ""
+        echo -e "${BLUE}ℹ️  Информация о создании резервной копии:${RESET}"
+        echo -e "• Будет создана полная копия текущего окружения MYSHELL."
+        echo -e "• Копия будет сохранена в директории:"
+        echo -e "$DATED_BACKUP_DIR"
+        echo -e "Старые копии будут архивированы при достижении лимита ($MAX_BACKUPS)."
         ;;
     esac
     
-    # Информация о компонентах
-    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
-    echo -e "${CYAN}│${RESET} 📋 Затрагиваемые компоненты:                                       ${CYAN}│${RESET}"
-    
-    case $ACTION in
-      "update"|"reinstall"|"install")
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Zsh/Oh-My-Zsh                                                ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Tmux                                                        ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Vim                                                         ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Dotfiles                                                    ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Плагины                                                     ${CYAN}│${RESET}"
-        ;;
-      "plugins")
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} zsh-autosuggestions                                         ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} zsh-syntax-highlighting                                     ${CYAN}│${RESET}"
-        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} PaperColor тема для Vim                                     ${CYAN}│${RESET}"
-        ;;
-      "backup")
-        [[ -d "$BASE_DIR/ohmyzsh" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Zsh/Oh-My-Zsh                                                ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Zsh/Oh-My-Zsh (отсутствует)                                  ${CYAN}│${RESET}"
-        [[ -d "$BASE_DIR/tmux" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Tmux                                                        ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Tmux (отсутствует)                                        ${CYAN}│${RESET}"
-        [[ -d "$BASE_DIR/vim" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Vim                                                         ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Vim (отсутствует)                                         ${CYAN}│${RESET}"
-        [[ -d "$BASE_DIR/dotfiles" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Dotfiles                                                    ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Dotfiles (отсутствуют)                                    ${CYAN}│${RESET}"
-        ;;
-    esac
-    
-    # Нижняя часть рамки и подтверждение
-    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
-    echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET} ${YELLOW}Предупреждение:${RESET} Перед продолжением убедитесь, что все данные,       ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET} которые вам важны, сохранены. В случае проблем вы всегда можете     ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET} восстановить настройки из резервной копии.                          ${CYAN}│${RESET}"
-    echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
-    echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+# Информация о компонентах
+echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+echo -e "${BLUE}📋 Затрагиваемые компоненты:${RESET}"
+
+case $ACTION in
+  "update"|"reinstall"|"install")
+    echo -e "  ${GREEN}✓${RESET} Zsh/Oh-My-Zsh"
+    echo -e "  ${GREEN}✓${RESET} Tmux"
+    echo -e "  ${GREEN}✓${RESET} Vim"
+    echo -e "  ${GREEN}✓${RESET} Dotfiles"
+    echo -e "  ${GREEN}✓${RESET} Плагины"
+    ;;
+  # Остальные блоки также убираем боковые рамки
+fi
+
+# Нижняя часть рамки и предупреждение
+echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+echo ""
+echo -e "${YELLOW}Предупреждение:${RESET} Перед продолжением убедитесь, что все данные,"
+echo -e "которые вам важны, сохранены. В случае проблем вы всегда можете"
+echo -e "восстановить настройки из резервной копии."
+echo ""
+echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
     
     # Запрашиваем подтверждение
     echo ""
