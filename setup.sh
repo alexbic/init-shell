@@ -433,7 +433,7 @@ archive_previous_backups() {
       dir_name=$(basename "$backup_dir")
       archive_path="$BACKUP_DIR/$dir_name.tar.gz"
       
-      print_operation "Архивируем папку $backup_dir" "архивировано" "CYAN"
+      print_operation "Архивируем папку $dir_name" "архивировано" "CYAN"
       
       if ! tar -czf "$archive_path" -C "$backup_dir" .; then
         if sudo tar -czf "$archive_path" -C "$backup_dir" .; then
