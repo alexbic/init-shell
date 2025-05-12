@@ -1686,7 +1686,6 @@ case $ACTION in
     echo -e "  ${GREEN}✓${RESET} Dotfiles"
     echo -e "  ${GREEN}✓${RESET} Плагины"
     ;;
-  # Остальные блоки также убираем боковые рамки
 fi
 
 # Нижняя часть рамки и предупреждение
