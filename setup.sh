@@ -59,73 +59,103 @@ SAVE_EXISTING=""
 # Функция для вывода заголовка группы операций
 print_group_header() {
   local title="$1"
-  echo -e "\n${BLUE}$title${RESET}"
+  echo -e "\n${BLUE}${title}${RESET}"
+}
+
+# Обновленная функция для вывода с анимированными точками и выровненным результатом
+print_status_message() {
+  local prefix="$1"      # Префикс сообщения (например, "Обновляем")
+  local message="$2"     # Основное сообщение
+  local result="$3"      # Результат (например, "актуальная версия")
+  local result_color="$4"  # Цвет результата (GREEN, CYAN, YELLOW, RED)
+  local indent="$5"      # Отступ (обычно "  " для операций или "" для заголовков)
+  local width=80         # Общая ширина строки
+  local pfx_msg_length=${#prefix}
+  local msg_length=${#message}
+  local result_length=${#result}
+  local total_length=$((pfx_msg_length + msg_length + 2)) # +2 для пробелов
+  local dots_count=$((width - total_length - result_length))
+  
+  # Выводим префикс и сообщение с отступом
+  echo -en "${indent}${BLUE}${prefix}${RESET} ${message}"
+  
+  # Выводим точки с небольшой задержкой для анимации (если не заголовок)
+  if [[ -n "$indent" ]]; then
+    for ((i=1; i<=dots_count; i++)); do
+      echo -en "${GRAY}.${RESET}"
+      sleep 0.01
+    done
+  fi
+  
+  # Выводим результат в указанном цвете
+  echo -e " ${!result_color}${result}${RESET}"
 }
 
 # Функция для вывода операции с бегущими точками и результатом
 print_operation_with_dots() {
   local operation="$1"
   local result="$2"
-  local result_color="$3"  # Цвет результата (например, GREEN или CYAN)
-  local width=70  # Общая ширина строки
-  local op_length=${#operation}
-  local res_length=${#result}
-  local dots_count=$((width - op_length - res_length))
+  local result_color="$3"  # Цвет результата
   
-  # Выводим операцию
-  echo -en "  ${BLUE}└─→ $operation${RESET}"
-  
-  # Постепенно выводим точки с небольшой задержкой для анимации
-  for ((i=1; i<=dots_count; i++)); do
-    echo -en "${GRAY}.${RESET}"
-    sleep 0.01  # Небольшая задержка для анимационного эффекта
-  done
-  
-  # Выводим результат в указанном цвете
-  echo -e " ${!result_color}$result${RESET}"
+  print_status_message "└─→" "$operation" "$result" "$result_color" "  "
 }
 
 # Функция для вывода анимированных точек с операцией в реальном времени
 begin_operation_with_dots() {
   local operation="$1"
   local expected_result="$2"
-  local width=70
+  local width=80
   local op_length=${#operation}
   local res_length=${#expected_result}
-  local dots_count=$((width - op_length - res_length))
+  local dots_count=$((width - op_length - res_length - 4)) # -4 для учета формата
   
-  echo -en "  ${BLUE}└─→ $operation${RESET}"
+  echo -en "  ${BLUE}└─→ ${operation}${RESET}"
   
   for ((i=1; i<=dots_count; i++)); do
     echo -en "${GRAY}.${RESET}"
-    sleep 0.005  # Быстрее для процесса реального времени
+    sleep 0.005
   done
-  
-  # Не выводим результат - результат будет выведен позже вызывающей функцией
 }
 
 # Функция для вывода успешного результата
 print_success_result() {
   local result="$1"
-  echo -e " ${CYAN}$result${RESET}"
+  echo -e " ${CYAN}${result}${RESET}"
 }
 
 # Функция для вывода сообщения об актуальности
 print_uptodate_result() {
   local result="$1"
-  echo -e " ${GREEN}$result${RESET}"
+  echo -e " ${GREEN}${result}${RESET}"
 }
 
 # Функция для вывода предупреждения
 print_warning_result() {
   local result="$1"
-  echo -e " ${YELLOW}$result${RESET}"
+  echo -e " ${YELLOW}${result}${RESET}"
 }
 
 # Функция для вывода ошибки
 print_error_result() {
   local result="$1"
-  echo -e " ${RED}$result${RESET}"
+  echo -e " ${RED}${result}${RESET}"
+}
+
+# Функция для вывода информационного сообщения
+print_info_message() {
+  local message="$1"
+  local result="$2"
+  local result_color="$3"  # Цвет результата
+  
+  print_status_message "ℹ️ " "$message" "$result" "$result_color" ""
+}
+
+# Функция для вывода предупреждения
+print_warning_message() {
+  local message="$1"
+  local result="$2"
+  
+  print_status_message "⚠️ " "$message" "$result" "YELLOW" ""
 }
 
 #----------------------------------------------------
@@ -213,7 +243,7 @@ show_config_info() {
       echo -e "  ${GREEN}✅ Dotfiles${RESET}" || 
       echo -e "  ${RED}❌ Dotfiles${RESET}"
   else
-    echo -e "  ${YELLOW}⚠️ Окружение ${CYAN}MYSHELL${YELLOW} не установлено${RESET}\n"
+    print_warning_message "Окружение MYSHELL" "не установлено"
     
     echo -e "  ${BLUE}🔎 Обнаружены внешние конфигурации:${RESET}"
     
@@ -423,9 +453,10 @@ main
 #----------------------------------------------------
 # 🔍 Архивация предыдущих резервных копий
 #----------------------------------------------------
+
 # Функция для архивации предыдущих бэкапов
 archive_previous_backups() {
-  begin_operation_with_dots "Проверка наличия предыдущих папок с бэкапами" "выполнено"
+  print_operation_with_dots "Проверка наличия предыдущих папок с бэкапами" "выполнено" "GREEN"
   
   # Находим все папки бэкапов, которые не архивированы
   BACKUP_DIRS=()
@@ -446,7 +477,7 @@ archive_previous_backups() {
       dir_name=$(basename "$backup_dir")
       archive_path="$BACKUP_DIR/$dir_name.tar.gz"
       
-      begin_operation_with_dots "Архивируем папку $backup_dir" "архивировано"
+      print_operation_with_dots "Архивируем папку $backup_dir" "архивировано" "CYAN"
       
       if tar -czf "$archive_path" -C "$backup_dir" .; then
         print_success_result "архивировано"
@@ -488,7 +519,7 @@ if [[ "$ACTION" == "backup" ]]; then
   archive_previous_backups
   
   # Создаем директорию для резервных копий
-  begin_operation_with_dots "Создание директории для резервных копий" "создано"
+  print_operation_with_dots "Создание директории для резервных копий" "создано" "CYAN"
   if mkdir -p "$BACKUP_DIR"; then
     print_success_result "создано"
   else
@@ -502,7 +533,7 @@ if [[ "$ACTION" == "backup" ]]; then
   fi
   
   # Создаем директорию для текущего бэкапа
-  begin_operation_with_dots "Создание директории для текущего бэкапа" "создано"
+  print_operation_with_dots "Создание директории для текущего бэкапа" "создано" "CYAN"
   if mkdir -p "$DATED_BACKUP_DIR"; then
     print_success_result "создано"
   else
@@ -516,7 +547,7 @@ if [[ "$ACTION" == "backup" ]]; then
   fi
   
   # Копируем текущее окружение .myshell (кроме папки backup)
-  begin_operation_with_dots "Копирование текущего окружения" "скопировано"
+  print_operation_with_dots "Копирование текущего окружения" "скопировано" "CYAN"
   if rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
     print_success_result "скопировано"
   else
@@ -552,7 +583,7 @@ if [[ "$ACTION" == "plugins" ]]; then
   
   # Обновление zsh-autosuggestions
   if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" ]]; then
-    begin_operation_with_dots "Обновляем zsh-autosuggestions" "обновлено"
+    print_operation_with_dots "Обновляем zsh-autosuggestions" "обновлено" "CYAN"
     if (cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" && git pull -q); then
       print_success_result "обновлено"
     else
@@ -565,7 +596,7 @@ if [[ "$ACTION" == "plugins" ]]; then
       fi
     fi
   else
-    begin_operation_with_dots "Устанавливаем zsh-autosuggestions" "установлено"
+    print_operation_with_dots "Устанавливаем zsh-autosuggestions" "установлено" "CYAN"
     mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
     if git clone -q "$GIT_ZSH_AUTOSUGGESTIONS_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"; then
       print_success_result "установлено"
@@ -576,7 +607,7 @@ if [[ "$ACTION" == "plugins" ]]; then
   
   # Обновление zsh-syntax-highlighting
   if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" ]]; then
-    begin_operation_with_dots "Обновляем zsh-syntax-highlighting" "обновлено"
+    print_operation_with_dots "Обновляем zsh-syntax-highlighting" "обновлено" "CYAN"
     if (cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" && git pull -q); then
       print_success_result "обновлено"
     else
@@ -589,7 +620,7 @@ if [[ "$ACTION" == "plugins" ]]; then
       fi
     fi
   else
-    begin_operation_with_dots "Устанавливаем zsh-syntax-highlighting" "установлено"
+    print_operation_with_dots "Устанавливаем zsh-syntax-highlighting" "установлено" "CYAN"
     mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
     if git clone -q "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"; then
       print_success_result "установлено"
@@ -602,7 +633,7 @@ if [[ "$ACTION" == "plugins" ]]; then
   
   # Обновление PaperColor темы
   if [[ -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
-    begin_operation_with_dots "Обновляем PaperColor тему" "обновлено"
+    print_operation_with_dots "Обновляем PaperColor тему" "обновлено" "CYAN"
     if (cd "$VIM_COLORS_DIR/papercolor-theme" && git pull -q); then
       print_success_result "обновлено"
     else
@@ -610,12 +641,12 @@ if [[ "$ACTION" == "plugins" ]]; then
       rm -rf "$VIM_COLORS_DIR/papercolor-theme"
       if git clone -q "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme"; then
         print_success_result "переустановлено"
-else
+      else
         print_error_result "ошибка переустановки"
       fi
     fi
   else
-    begin_operation_with_dots "Устанавливаем PaperColor тему" "установлено"
+    print_operation_with_dots "Устанавливаем PaperColor тему" "установлено" "CYAN"
     mkdir -p "$VIM_COLORS_DIR"
     if git clone -q "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme"; then
       print_success_result "установлено"
@@ -625,7 +656,7 @@ else
   fi
   
   # Обновление символической ссылки
-  begin_operation_with_dots "Обновляем символическую ссылку для PaperColor" "обновлено"
+  print_operation_with_dots "Обновляем символическую ссылку для PaperColor" "обновлено" "CYAN"
   if ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"; then
     print_success_result "обновлено"
   else
@@ -655,7 +686,7 @@ for pkg in $PACKAGES; do
 done
 
 if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
-  begin_operation_with_dots "Устанавливаем: ${NEEDED_PACKAGES[*]}" "установлено"
+  print_operation_with_dots "Устанавливаем: ${NEEDED_PACKAGES[*]}" "установлено" "CYAN"
   if sudo apt update && sudo apt install -y "${NEEDED_PACKAGES[@]}"; then
     print_success_result "установлено"
   else
@@ -664,7 +695,7 @@ if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
     exit 1
   fi
 else
-  begin_operation_with_dots "Проверка необходимых пакетов" "актуальная версия"
+  print_operation_with_dots "Проверка необходимых пакетов" "актуальная версия" "GREEN"
   print_uptodate_result "актуальная версия"
 fi
 
@@ -676,14 +707,14 @@ print_group_header "🔍 Проверка наличия окружения и �
 
 # Проверяем наличие директории .myshell
 if [[ -d "$BASE_DIR" ]]; then
-  echo -e "${YELLOW}⚠️ Обнаружено существующее окружение .myshell${RESET}"
+  print_warning_message "Обнаружено окружение" ".myshell"
   
   if [[ "$SAVE_EXISTING" == "y" ]]; then
     # Архивируем предыдущие бэкапы
     archive_previous_backups
     
     # Создаем новую папку для текущего бэкапа
-    begin_operation_with_dots "Создание папки для текущего бэкапа" "создано"
+    print_operation_with_dots "Создание папки для текущего бэкапа" "создано" "CYAN"
     if mkdir -p "$DATED_BACKUP_DIR"; then
       print_success_result "создано"
     else
@@ -697,7 +728,7 @@ if [[ -d "$BASE_DIR" ]]; then
     fi
     
     # Копируем текущее окружение .myshell (кроме папки backup)
-    begin_operation_with_dots "Копирование текущего окружения" "скопировано"
+    print_operation_with_dots "Копирование текущего окружения" "скопировано" "CYAN"
     if rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
       print_success_result "скопировано"
     else
@@ -710,7 +741,7 @@ if [[ -d "$BASE_DIR" ]]; then
       fi
     fi
   else
-    echo -e "${YELLOW}⚠️ Бэкап текущего окружения .myshell не был создан по выбору пользователя.${RESET}"
+    print_warning_message "Бэкап текущего окружения .myshell" "не создан по выбору пользователя"
   fi
 else
   # Если .myshell не найден, проверяем наличие отдельных конфигурационных файлов
@@ -722,10 +753,10 @@ else
   [[ -f "$HOME/.vimrc" || -d "$HOME/.vim" ]] && EXISTING_CONFIGS="${EXISTING_CONFIGS}VIM "
   
   if [[ -n "$EXISTING_CONFIGS" ]]; then
-    echo -e "${YELLOW}⚠️ Обнаружены существующие конфигурации: ${EXISTING_CONFIGS}${RESET}"
+    print_warning_message "Обнаружены существующие конфигурации" "${EXISTING_CONFIGS}"
   
     if [[ "$SAVE_EXISTING" == "y" ]]; then
-      begin_operation_with_dots "Создание директорий для бэкапа" "создано"
+      print_operation_with_dots "Создание директорий для бэкапа" "создано" "CYAN"
       
       # Сначала создаем базовую директорию .myshell
       if ! mkdir -p "$BASE_DIR"; then
@@ -753,7 +784,7 @@ else
           # Если это символическая ссылка, проверяем, что она не битая
           local target=$(readlink -f "$src")
           if [[ -e "$target" ]]; then
-            begin_operation_with_dots "Копирование файла по ссылке: $src -> $target" "скопировано"
+            print_operation_with_dots "Копирование файла по ссылке: $src -> $target" "скопировано" "CYAN"
             if cp -pL "$src" "$dst"; then
               print_success_result "скопировано"
             else
@@ -765,12 +796,12 @@ else
               fi
             fi
           else
-            echo -e "${YELLOW}⚠️ Пропускаем битую символическую ссылку: $src${RESET}"
+            print_warning_message "Пропускаем битую символическую ссылку" "$src"
           fi
         elif [[ -f "$src" ]]; then
           # Если это обычный файл
           if [[ -s "$src" ]]; then  # Проверка на непустой файл
-            begin_operation_with_dots "Копирование файла: $src" "скопировано"
+            print_operation_with_dots "Копирование файла: $src" "скопировано" "CYAN"
             if cp -p "$src" "$dst"; then
               print_success_result "скопировано"
             else
@@ -782,11 +813,11 @@ else
               fi
             fi
           else
-            echo -e "${YELLOW}⚠️ Пропускаем пустой файл: $src${RESET}"
+            print_warning_message "Пропускаем пустой файл" "$src"
           fi
         elif [[ -d "$src" ]]; then
           # Если это директория
-          begin_operation_with_dots "Копирование директории: $src" "скопировано"
+          print_operation_with_dots "Копирование директории: $src" "скопировано" "CYAN"
           if cp -a "$src" "$dst"; then
             print_success_result "скопировано"
           else
@@ -814,7 +845,7 @@ else
             echo -e "${BLUE}🔄 Обнаружена символическая ссылка .oh-my-zsh, копируем настоящую директорию${RESET}"
             local omz_target=$(readlink -f "$HOME/.oh-my-zsh")
             if [[ -d "$omz_target" ]]; then
-              begin_operation_with_dots "Копирование .oh-my-zsh -> $omz_target" "скопировано"
+              print_operation_with_dots "Копирование .oh-my-zsh -> $omz_target" "скопировано" "CYAN"
               if cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"; then
                 print_success_result "скопировано"
               else
@@ -826,10 +857,10 @@ else
                 fi
               fi
             else
-              echo -e "${YELLOW}⚠️ Ссылка .oh-my-zsh указывает на несуществующую директорию${RESET}"
+              print_warning_message "Ссылка .oh-my-zsh указывает на несуществующую директорию" "$omz_target"
             fi
           else
-            begin_operation_with_dots "Копирование .oh-my-zsh" "скопировано"
+            print_operation_with_dots "Копирование .oh-my-zsh" "скопировано" "CYAN"
             if cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"; then
               print_success_result "скопировано"
             else
@@ -863,7 +894,7 @@ else
             echo -e "${BLUE}🔄 Обнаружена символическая ссылка .vim, копируем настоящую директорию${RESET}"
             local vim_target=$(readlink -f "$HOME/.vim")
             if [[ -d "$vim_target" ]]; then
-              begin_operation_with_dots "Копирование .vim -> $vim_target" "скопировано"
+              print_operation_with_dots "Копирование .vim -> $vim_target" "скопировано" "CYAN"
               if cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"; then
                 print_success_result "скопировано"
               else
@@ -875,10 +906,10 @@ else
                 fi
               fi
             else
-              echo -e "${YELLOW}⚠️ Ссылка .vim указывает на несуществующую директорию${RESET}"
+              print_warning_message "Ссылка .vim указывает на несуществующую директорию" "$vim_target"
             fi
           else
-            begin_operation_with_dots "Копирование .vim" "скопировано"
+            print_operation_with_dots "Копирование .vim" "скопировано" "CYAN"
             if cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"; then
               print_success_result "скопировано"
             else
@@ -895,10 +926,10 @@ else
       
       echo -e "${GREEN}✅ Бэкап сохранен в $DATED_BACKUP_DIR${RESET}"
     else
-      echo -e "${YELLOW}⚠️ Бэкап не был создан по выбору пользователя.${RESET}"
+      print_warning_message "Бэкап не создан" "по выбору пользователя"
     fi
   else
-    echo -e "${GREEN}✅ Существующих конфигураций не обнаружено.${RESET}"
+    print_info_message "Существующих конфигураций" "не обнаружено" "GREEN"
   fi
 fi
 
@@ -909,7 +940,7 @@ if [[ "$ACTION" != "update" ]]; then
   #----------------------------------------------------
 
   # Очищаем содержимое директории .myshell (кроме директории backup)
-  begin_operation_with_dots "Очищаем содержимое директории $BASE_DIR (кроме бэкапов)" "очищено"
+  print_operation_with_dots "Очищаем содержимое директории $BASE_DIR (кроме бэкапов)" "очищено" "CYAN"
   if find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 rm -rf 2>/dev/null; then
     print_success_result "очищено"
   else
@@ -931,7 +962,7 @@ clean_ohmyzsh() {
   print_group_header "🧹 Удаление предыдущей установки Oh-My-Zsh"
   
   if [[ -L "$HOME/.oh-my-zsh" ]]; then
-    begin_operation_with_dots "Удаляем символическую ссылку .oh-my-zsh" "удалено"
+    print_operation_with_dots "Удаляем символическую ссылку .oh-my-zsh" "удалено" "CYAN"
     if ( cd "$HOME" && exec /bin/rm -f .oh-my-zsh ); then
       print_success_result "удалено"
     else
@@ -944,7 +975,7 @@ clean_ohmyzsh() {
       fi
     fi
   elif [[ -d "$HOME/.oh-my-zsh" ]]; then
-    begin_operation_with_dots "Удаляем директорию .oh-my-zsh" "удалено"
+    print_operation_with_dots "Удаляем директорию .oh-my-zsh" "удалено" "CYAN"
     if /bin/rm -rf "$HOME/.oh-my-zsh"; then
       print_success_result "удалено"
     else
@@ -970,7 +1001,7 @@ clean_ohmyzsh() {
 
 # Функция для установки Oh-My-Zsh (предполагает, что путь уже чист)
 install_ohmyzsh() {
-  begin_operation_with_dots "Установка Oh-My-Zsh" "установлено"
+  print_operation_with_dots "Установка Oh-My-Zsh" "установлено" "CYAN"
   
   # Очищаем и создаем директорию в нашем окружении
   mkdir -p "$BASE_DIR/ohmyzsh" || sudo mkdir -p "$BASE_DIR/ohmyzsh"
@@ -988,7 +1019,7 @@ install_ohmyzsh() {
 
 # Функция для обновления Oh-My-Zsh
 update_ohmyzsh() {
-  begin_operation_with_dots "Обновление Oh-My-Zsh" "обновлено"
+  print_operation_with_dots "Обновление Oh-My-Zsh" "обновлено" "CYAN"
   
   if [[ -d "$BASE_DIR/ohmyzsh" ]]; then
     # Если Oh-My-Zsh находится в нашем окружении
@@ -1043,7 +1074,7 @@ print_group_header "📦 Настройка Oh-My-Zsh"
 if [[ "$ACTION" == "update" ]]; then
   # Если выбрано обновление, просто обновляем Oh-My-Zsh
   update_ohmyzsh || {
-    echo -e "${YELLOW}⚠️ Не удалось обновить Oh-My-Zsh. Пропускаем...${RESET}"
+    print_warning_message "Не удалось обновить Oh-My-Zsh" "пропускаем"
   }
 else
   # Во всех других случаях (установка, переустановка) - очищаем и устанавливаем заново
@@ -1063,7 +1094,7 @@ if [[ "$ACTION" != "update" ]]; then
     
     # Проверяем тип элемента и удаляем соответственно
     if [[ -L "$target" ]]; then
-      begin_operation_with_dots "Удаляем симлинк: $target" "удалено"
+      print_operation_with_dots "Удаляем симлинк: $target" "удалено" "CYAN"
       if rm "$target" 2>/dev/null; then
         print_success_result "удалено"
       else
@@ -1075,7 +1106,7 @@ if [[ "$ACTION" != "update" ]]; then
         fi
       fi
     elif [[ -f "$target" ]]; then
-      begin_operation_with_dots "Удаляем файл: $target" "удалено"
+      print_operation_with_dots "Удаляем файл: $target" "удалено" "CYAN"
       if rm "$target" 2>/dev/null; then
         print_success_result "удалено"
       else
@@ -1087,7 +1118,7 @@ if [[ "$ACTION" != "update" ]]; then
         fi
       fi
     elif [[ -d "$target" ]]; then
-      begin_operation_with_dots "Удаляем директорию: $target" "удалено"
+      print_operation_with_dots "Удаляем директорию: $target" "удалено" "CYAN"
       if rm -rf "$target" 2>/dev/null; then
         print_success_result "удалено"
       else
@@ -1099,7 +1130,7 @@ if [[ "$ACTION" != "update" ]]; then
         fi
       fi
     else
-      begin_operation_with_dots "Пропускаем: $target (не найден)" "пропущено"
+      print_operation_with_dots "Пропускаем: $target (не найден)" "пропущено" "GREEN"
       print_uptodate_result "пропущено"
     fi
   }
@@ -1126,7 +1157,7 @@ update_or_clone_repo() {
   
   if [[ -d "$target_dir" && -d "$target_dir/.git" ]]; then
     # Директория существует и это git-репозиторий
-    begin_operation_with_dots "Обновляем $repo_name" "обновлено"
+    print_operation_with_dots "Обновляем $repo_name" "обновлено" "CYAN"
     
     # Сначала выполняем fetch, чтобы получить информацию об изменениях
     if ! (cd "$target_dir" && git fetch -q); then
@@ -1151,7 +1182,7 @@ update_or_clone_repo() {
     fi
   else
     # Директория не существует или не является git-репозиторием, клонируем
-    begin_operation_with_dots "Клонируем $repo_name" "клонировано"
+    print_operation_with_dots "Клонируем $repo_name" "клонировано" "CYAN"
     
     # Если директория существует, но не является git-репозиторием, удаляем её
     if [[ -d "$target_dir" ]]; then
@@ -1178,7 +1209,7 @@ update_or_clone_repo "$GIT_TMUX_REPO" "$BASE_DIR/tmux" "tmux конфигура�
 update_or_clone_repo "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" "dotfiles"
 
 # Создаем директории для vim, если они не существуют
-begin_operation_with_dots "Создание директорий для vim" "создано"
+print_operation_with_dots "Создание директорий для vim" "создано" "CYAN"
 if mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR"; then
   print_success_result "создано"
 else
@@ -1194,7 +1225,7 @@ fi
 update_or_clone_repo "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme" "PaperColor тему"
 
 # Создаем символическую ссылку для PaperColor
-begin_operation_with_dots "Создание символической ссылки для PaperColor" "создано"
+print_operation_with_dots "Создание символической ссылки для PaperColor" "создано" "CYAN"
 if ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"; then
   print_success_result "создано"
 else
@@ -1208,7 +1239,7 @@ fi
 
 print_group_header "📦 Устанавливаем плагины для Zsh"
 
-begin_operation_with_dots "Создание директории для плагинов" "создано"
+print_operation_with_dots "Создание директории для плагинов" "создано" "CYAN"
 if mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"; then
   print_success_result "создано"
 else
@@ -1223,7 +1254,7 @@ fi
 # Обновляем или клонируем zsh-autosuggestions
 update_or_clone_repo "$GIT_ZSH_AUTOSUGGESTIONS_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions"
 
-# Обновляем или клонируем zsh-syntax-highlighting zsh-syntax-highlighting
+# Обновляем или клонируем zsh-syntax-highlighting
 update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
 
 #----------------------------------------------------
@@ -1232,7 +1263,7 @@ update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/cust
 
 print_group_header "⚙️ Настраиваем окружение"
 
-begin_operation_with_dots "Настраиваем zsh" "настроено"
+print_operation_with_dots "Настраиваем zsh" "настроено" "CYAN"
 if ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"; then
   print_success_result "настроено"
 else
@@ -1244,7 +1275,7 @@ else
   fi
 fi
 
-begin_operation_with_dots "Настраиваем vim" "настроено"
+print_operation_with_dots "Настраиваем vim" "настроено" "CYAN"
 if ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc" && ln -sfn "$VIM_DIR" "$HOME/.vim"; then
   print_success_result "настроено"
 else
@@ -1256,7 +1287,7 @@ else
   fi
 fi
 
-begin_operation_with_dots "Настраиваем tmux" "настроено"
+print_operation_with_dots "Настраиваем tmux" "настроено" "CYAN"
 if ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" && ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"; then
   print_success_result "настроено"
 else
@@ -1268,7 +1299,7 @@ else
   fi
 fi
 
-begin_operation_with_dots "Настраиваем Oh-My-Zsh" "настроено"
+print_operation_with_dots "Настраиваем Oh-My-Zsh" "настроено" "CYAN"
 if ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"; then
   print_success_result "настроено"
 else
@@ -1281,7 +1312,7 @@ else
 fi
 
 # Создаем файл версии
-begin_operation_with_dots "Создание файла версии" "создано"
+print_operation_with_dots "Создание файла версии" "создано" "CYAN"
 if echo "$SCRIPT_VERSION" > "$BASE_DIR/version"; then
   print_success_result "создано"
 else
@@ -1302,10 +1333,10 @@ if [[ "$(basename "$SHELL")" != "zsh" ]]; then
   
   ZSH_PATH=$(which zsh)
   # Проверяем, есть ли уже zsh в /etc/shells
-  begin_operation_with_dots "Проверка наличия zsh в /etc/shells" "проверено"
+  print_operation_with_dots "Проверка наличия zsh в /etc/shells" "проверено" "CYAN"
   if ! grep -q "$ZSH_PATH" /etc/shells; then
     print_warning_result "требуется добавление"
-    begin_operation_with_dots "Добавляем $ZSH_PATH в /etc/shells" "добавлено"
+    print_operation_with_dots "Добавляем $ZSH_PATH в /etc/shells" "добавлено" "CYAN"
     if echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null; then
       print_success_result "добавлено"
     else
@@ -1316,7 +1347,7 @@ if [[ "$(basename "$SHELL")" != "zsh" ]]; then
   fi
   
   # Меняем оболочку по умолчанию с проверкой
-  begin_operation_with_dots "Меняем shell на Zsh для пользователя $USER" "изменено"
+  print_operation_with_dots "Меняем shell на Zsh для пользователя $USER" "изменено" "CYAN"
   if chsh -s "$ZSH_PATH" 2>/dev/null; then
     print_success_result "изменено"
   else
@@ -1328,7 +1359,7 @@ if [[ "$(basename "$SHELL")" != "zsh" ]]; then
     fi
   fi
 else
-  begin_operation_with_dots "Проверка текущего shell" "актуальная версия"
+  print_operation_with_dots "Проверка текущего shell" "актуальная версия" "GREEN"
   print_uptodate_result "актуальная версия"
 fi
 
@@ -1338,7 +1369,7 @@ fi
 
 print_group_header "🛠️ Установка правильных прав доступа"
 
-begin_operation_with_dots "Установка прав доступа для директории $BASE_DIR" "установлено"
+print_operation_with_dots "Установка прав доступа для директории $BASE_DIR" "установлено" "CYAN"
 if sudo chown -R "$USER":"$USER" "$BASE_DIR"; then
   print_success_result "установлено"
 else
@@ -1348,7 +1379,7 @@ fi
 # Проверяем, что символические ссылки существуют перед установкой прав
 for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
   if [[ -L "$link" ]]; then
-    begin_operation_with_dots "Установка прав доступа для $link" "установлено"
+    print_operation_with_dots "Установка прав доступа для $link" "установлено" "CYAN"
     if sudo chown -h "$USER":"$USER" "$link" 2>/dev/null; then
       print_success_result "установлено"
     else
@@ -1360,7 +1391,7 @@ done
 #----------------------------------------------------
 # 🗑️ Очистка временной директории
 #----------------------------------------------------
-begin_operation_with_dots "Очистка временной директории $HOME/init-shell" "очищено"
+print_operation_with_dots "Очистка временной директории $HOME/init-shell" "очищено" "CYAN"
 if rm -rf "$HOME/init-shell" 2>/dev/null || sudo rm -rf "$HOME/init-shell"; then
   print_success_result "очищено"
 else
@@ -1386,3 +1417,6 @@ else
 fi
 
 
+
+
+      
