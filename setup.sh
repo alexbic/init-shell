@@ -86,7 +86,7 @@ show_config_info() {
     local base_version=""
     if [[ -f "$BASE_DIR/version" ]]; then
       base_version=$(cat "$BASE_DIR/version")
-      echo -e "  ${BLUE}ℹ️ Версия:${RESET} $base_version"
+      echo -e "  ${BLUE}ℹ️  Версия:${RESET} $base_version"
     else
       echo -e "  ${YELLOW}⚠️ Версия не определена${RESET}"
     fi
@@ -317,7 +317,7 @@ archive_previous_backups() {
   
   # Если найдены предыдущие папки с бэкапами, архивируем их все
   if [[ ${#BACKUP_DIRS[@]} -gt 0 ]]; then
-    echo -e "${YELLOW}⚠️ Обнаружено ${#BACKUP_DIRS[@]} предыдущих папок с бэкапами${RESET}"
+    echo -e "${YELLOW}⚠️  Обнаружено ${#BACKUP_DIRS[@]} предыдущих папок с бэкапами${RESET}"
     
     # Архивируем каждую папку
     for backup_dir in "${BACKUP_DIRS[@]}"; do
@@ -326,7 +326,7 @@ archive_previous_backups() {
       
       echo -e "${BLUE}📦 Архивируем папку $backup_dir в $archive_path...${RESET}"
       tar -czf "$archive_path" -C "$backup_dir" . || {
-        echo -e "${YELLOW}⚠️ Ошибка при архивации. Пробуем с sudo...${RESET}"
+        echo -e "${YELLOW}⚠️  Ошибка при архивации. Пробуем с sudo...${RESET}"
         sudo tar -czf "$archive_path" -C "$backup_dir" .
       }
       
@@ -355,20 +355,20 @@ if [[ "$ACTION" == "backup" ]]; then
   
   # Создаем директорию для резервных копий
   mkdir -p "$BACKUP_DIR" || {
-    echo -e "${YELLOW}⚠️ Не удалось создать директорию резервных копий. Пробуем с sudo...${RESET}"
+    echo -e "${YELLOW}⚠️  Не удалось создать директорию резервных копий. Пробуем с sudo...${RESET}"
     sudo mkdir -p "$BACKUP_DIR"
   }
   
   # Создаем директорию для текущего бэкапа
   mkdir -p "$DATED_BACKUP_DIR" || {
-    echo -e "${YELLOW}⚠️ Не удалось создать директорию для текущего бэкапа. Пробуем с sudo...${RESET}"
+    echo -e "${YELLOW}⚠️  Не удалось создать директорию для текущего бэкапа. Пробуем с sudo...${RESET}"
     sudo mkdir -p "$DATED_BACKUP_DIR"
   }
   
   # Копируем текущее окружение .myshell (кроме папки backup)
   echo -e "${BLUE}🔄 Копирование текущего окружения в $DATED_BACKUP_DIR...${RESET}"
   rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/" || {
-    echo -e "${YELLOW}⚠️ Ошибка при копировании. Пробуем с sudo...${RESET}"
+    echo -e "${YELLOW}⚠️  Ошибка при копировании. Пробуем с sudo...${RESET}"
     sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"
   }
   echo -e "${GREEN}✅ Текущее окружение .myshell сохранено в $DATED_BACKUP_DIR${RESET}"
