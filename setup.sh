@@ -242,7 +242,7 @@ show_menu() {
     
     # Подтверждение выбора
     echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
-    read -p "✅ Продолжить? (y/n): " confirm
+    read -p "                 Продолжить? (y/n): " confirm
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
       clear
