@@ -915,8 +915,6 @@ install_ohmyzsh() {
 
 # Функция для обновления Oh-My-Zsh
 update_ohmyzsh() {
-  print_operation "Обновление Oh-My-Zsh" "обновлено" "CYAN"
-  
   if [[ -d "$BASE_DIR/ohmyzsh" ]]; then
     # Если Oh-My-Zsh находится в нашем окружении
     # Сначала выполняем fetch, чтобы получить информацию об изменениях
@@ -926,33 +924,35 @@ update_ohmyzsh() {
     
     # Проверяем, есть ли изменения
     if (cd "$BASE_DIR/ohmyzsh" && git diff --quiet HEAD origin/HEAD); then
-      print_operation "Статус Oh-My-Zsh" "актуальная версия" "GREEN"
+      print_operation "Проверка Oh-My-Zsh" "актуальная версия" "GREEN"
       return 0
     else
+      print_operation "Обновление Oh-My-Zsh" "обновляется" "CYAN"
       if ! (cd "$BASE_DIR/ohmyzsh" && git pull -q); then
         if sudo -u "$USER" git -C "$BASE_DIR/ohmyzsh" pull -q; then
-          print_operation "Обновление с sudo" "успешно" "CYAN"
+          print_operation "Обновление Oh-My-Zsh с sudo" "обновлено" "CYAN"
           return 0
         else
-          print_operation "Обновление" "ошибка" "RED"
+          print_operation "Обновление Oh-My-Zsh" "ошибка" "RED"
           return 1
         fi
       else
-        print_operation "Обновление" "успешно" "CYAN"
+        print_operation "Обновление Oh-My-Zsh" "обновлено" "CYAN"
         return 0
       fi
     fi
   elif [[ -x "$HOME/.oh-my-zsh/tools/upgrade.sh" ]]; then
     # Если это внешняя установка Oh-My-Zsh
+    print_operation "Обновление внешней установки Oh-My-Zsh" "начато" "CYAN"
     # Запускаем обновление
     export RUNZSH=no
     export KEEP_ZSHRC=yes
     
     if "$HOME/.oh-my-zsh/tools/upgrade.sh" --unattended &>/dev/null; then
-      print_operation "Обновление внешней установки" "успешно" "CYAN"
+      print_operation "Обновление внешней установки Oh-My-Zsh" "завершено" "CYAN"
       return 0
     else
-      print_operation "Обновление внешней установки" "ошибка" "RED"
+      print_operation "Обновление внешней установки Oh-My-Zsh" "ошибка" "RED"
       return 1
     fi
   fi
@@ -1040,7 +1040,6 @@ update_or_clone_repo() {
   
   if [[ -d "$target_dir" && -d "$target_dir/.git" ]]; then
     # Директория существует и это git-репозиторий
-    print_operation "Обновляем $repo_name" "обновлено" "CYAN"
     
     # Сначала выполняем fetch, чтобы получить информацию об изменениях
     if ! (cd "$target_dir" && git fetch -q); then
@@ -1049,21 +1048,24 @@ update_or_clone_repo() {
     
     # Проверяем, есть ли изменения
     if (cd "$target_dir" && git diff --quiet HEAD origin/HEAD); then
-      print_operation "Статус $repo_name" "актуальная версия" "GREEN"
+      # Если изменений нет, просто выводим статус об актуальности
+      print_operation "Проверка $repo_name" "актуальная версия" "GREEN"
     else
+      # Если есть изменения, пытаемся обновить
+      print_operation "Обновление $repo_name" "обновляется" "CYAN"
       if ! (cd "$target_dir" && git pull -q); then
         if sudo -u "$USER" git -C "$target_dir" pull -q; then
-          print_operation "Обновление с sudo" "успешно" "CYAN"
+          print_operation "Обновление $repo_name с sudo" "обновлено" "CYAN"
         else
-          print_operation "Обновление" "ошибка" "RED"
+          print_operation "Обновление $repo_name" "ошибка" "RED"
         fi
       else
-        print_operation "Обновление" "успешно" "CYAN"
+        print_operation "Обновление $repo_name" "обновлено" "CYAN"
       fi
     fi
   else
     # Директория не существует или не является git-репозиторием, клонируем
-    print_operation "Клонируем $repo_name" "клонировано" "CYAN"
+    print_operation "Клонирование $repo_name" "начато" "CYAN"
     
     # Если директория существует, но не является git-репозиторием, удаляем её
     if [[ -d "$target_dir" ]]; then
@@ -1071,12 +1073,12 @@ update_or_clone_repo() {
     fi
     
     if git clone -q "$repo_url" "$target_dir"; then
-      print_operation "Клонирование" "успешно" "CYAN"
+      print_operation "Клонирование $repo_name" "завершено" "CYAN"
     else
       if sudo git clone -q "$repo_url" "$target_dir"; then
-        print_operation "Клонирование с sudo" "успешно" "CYAN"
+        print_operation "Клонирование $repo_name с sudo" "завершено" "CYAN"
       else
-        print_operation "Клонирование" "ошибка" "RED"
+        print_operation "Клонирование $repo_name" "ошибка" "RED"
       fi
     fi
   fi
