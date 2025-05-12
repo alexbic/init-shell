@@ -917,20 +917,30 @@ if [[ "$ACTION" != "update" ]]; then
     fi
   }
   
-  # Удаление старых конфигов и симлинков
-  print_operation "Удаление старых конфигурационных файлов" "выполняется" "CYAN"
-  
-  for item in $TRASH; do
-    # Эта часть использует патерны шелла для поиска
-    for target in $HOME/$item; do
-      if [[ -e "$target" || -L "$target" ]]; then
-        base_item=$(basename "$target")
-        clean_item "$base_item"
-      fi
-    done
+# Удаление старых конфигов и симлинков
+echo -e "  ${BLUE}└─→ Удаляем старые конфигурационные файлы:${RESET}"
+
+# Подсчитываем, сколько всего файлов надо удалить
+declare -a files_to_remove=()
+for item in $TRASH; do
+  for target in $HOME/$item; do
+    if [[ -e "$target" || -L "$target" ]]; then
+      files_to_remove+=("$(basename "$target")")
+    fi
+  done
+done
+
+# Если нет файлов для удаления
+if [ ${#files_to_remove[@]} -eq 0 ]; then
+  print_operation "Старые конфигурационные файлы" "не найдены" "GREEN"
+else
+  # Удаляем каждый файл с подробным логированием
+  for base_item in "${files_to_remove[@]}"; do
+    clean_item "$base_item"
   done
   
-  print_operation "Удаление старых конфигурационных файлов" "завершено" "GREEN"
+  # В конце выводим итоговое сообщение
+  print_operation "Всего удалено файлов" "${#files_to_remove[@]}" "GREEN"
 fi
 
 #----------------------------------------------------
