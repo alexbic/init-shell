@@ -46,7 +46,7 @@ GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO="https://github.com/zsh-users/zsh-syntax-highli
 GIT_VIM_PAPERCOLOR_REPO="https://github.com/NLKNguyen/papercolor-theme.git"
 
 # 🔣 Версия скрипта
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.0.1"
 
 # Инициализация переменных для интерактивного режима
 ACTION=""
@@ -58,11 +58,11 @@ SAVE_EXISTING=""
 
 # Функция для очистки при прерывании
 cleanup_on_interrupt() {
-  echo -e "\n${YELLOW}⚠️ Получен сигнал прерывания. Выполняем очистку...${RESET}"
+  echo -e "\n${YELLOW}⚠️  Получен сигнал прерывания. Выполняем очистку...${RESET}"
   
   # Проверяем наличие временной директории init-shell и удаляем её
   if [[ -d "$HOME/init-shell" ]]; then
-    echo -e "${BLUE}🗑️ Удаляем временную директорию $HOME/init-shell...${RESET}"
+    echo -e "${BLUE}🗑️  Удаляем временную директорию $HOME/init-shell...${RESET}"
     rm -rf "$HOME/init-shell" 2>/dev/null || sudo rm -rf "$HOME/init-shell"
   fi
   
@@ -87,11 +87,11 @@ show_logo() {
   # Рисуем логотип в цветах российского флага
   echo -e "${WHITE}"
   echo "  __  ____  _______ __  __________    __"
-  echo "  __  ____  _______ __  __________    __"
   echo -e "${RU_BLUE} /  |/  / |/ / ___// / / / ____/ /   / /"
   echo -e " / /|_/ /|   /\\__ \\/ /_/ / __/ / /   / /"
   echo -e "${RU_RED}/ /  / //   /___/ / __  / /___/ /___/ /___"
   echo -e "/_/  /_//_/|_/____/_/ /_/_____/_____/_____/${RESET}"
+  
   
   echo -e "${BLUE}💡 Development Environment for ${CYAN}AlexBic.net${RESET} Projects"
   echo -e "${BLUE}📦 Version: ${YELLOW}$SCRIPT_VERSION${RESET}"
