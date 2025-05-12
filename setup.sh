@@ -100,7 +100,24 @@ print_operation_with_dots() {
   print_status_message "└─→" "$operation" "$result" "$result_color" "  "
 }
 
-# Функция для вывода анимированных точек с операцией в реальном времени
+# Функция для вывода информационного сообщения
+print_info_message() {
+  local message="$1"
+  local result="$2"
+  local result_color="$3"  # Цвет результата
+  
+  print_status_message "ℹ️ " "$message" "$result" "$result_color" ""
+}
+
+# Функция для вывода предупреждения
+print_warning_message() {
+  local message="$1"
+  local result="$2"
+  
+  print_status_message "⚠️ " "$message" "$result" "YELLOW" ""
+}
+
+# Функция для начала операции (без вывода результата)
 begin_operation_with_dots() {
   local operation="$1"
   local expected_result="$2"
@@ -117,45 +134,28 @@ begin_operation_with_dots() {
   done
 }
 
-# Функция для вывода успешного результата
+# Функция для вывода успешного результата (без вывода операции)
 print_success_result() {
   local result="$1"
   echo -e " ${CYAN}${result}${RESET}"
 }
 
-# Функция для вывода сообщения об актуальности
+# Функция для вывода сообщения об актуальности (без вывода операции)
 print_uptodate_result() {
   local result="$1"
   echo -e " ${GREEN}${result}${RESET}"
 }
 
-# Функция для вывода предупреждения
+# Функция для вывода предупреждения (без вывода операции)
 print_warning_result() {
   local result="$1"
   echo -e " ${YELLOW}${result}${RESET}"
 }
 
-# Функция для вывода ошибки
+# Функция для вывода ошибки (без вывода операции)
 print_error_result() {
   local result="$1"
   echo -e " ${RED}${result}${RESET}"
-}
-
-# Функция для вывода информационного сообщения
-print_info_message() {
-  local message="$1"
-  local result="$2"
-  local result_color="$3"  # Цвет результата
-  
-  print_status_message "ℹ️ " "$message" "$result" "$result_color" ""
-}
-
-# Функция для вывода предупреждения
-print_warning_message() {
-  local message="$1"
-  local result="$2"
-  
-  print_status_message "⚠️ " "$message" "$result" "YELLOW" ""
 }
 
 #----------------------------------------------------
