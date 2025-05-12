@@ -51,7 +51,6 @@ SCRIPT_VERSION="1.0.0"
 # Инициализация переменных для интерактивного режима
 ACTION=""
 SAVE_EXISTING=""
-
 #----------------------------------------------------
 # 🎨 Функции для интерактивного интерфейса
 #----------------------------------------------------
@@ -299,8 +298,47 @@ show_config_info
 show_menu
 
 #----------------------------------------------------
-# 🔍 Выполнение выбранного действия
+# 🔍 Выполнение специальных действий
 #----------------------------------------------------
+
+# Функция для архивации предыдущих бэкапов
+archive_previous_backups() {
+  echo -e "${BLUE}🔍 Проверка наличия предыдущих папок с бэкапами...${RESET}"
+  
+  # Находим все папки бэкапов, которые не архивированы
+  BACKUP_DIRS=()
+  while IFS= read -r dir; do
+    dir_name=$(basename "$dir")
+    # Ищем только папки, начинающиеся с "backup_"
+    if [[ -d "$dir" && "$dir" != "$BACKUP_DIR" && "$dir_name" == backup_* ]]; then
+      BACKUP_DIRS+=("$dir")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+  
+  # Если найдены предыдущие папки с бэкапами, архивируем их все
+  if [[ ${#BACKUP_DIRS[@]} -gt 0 ]]; then
+    echo -e "${YELLOW}⚠️ Обнаружено ${#BACKUP_DIRS[@]} предыдущих папок с бэкапами${RESET}"
+    
+    # Архивируем каждую папку
+    for backup_dir in "${BACKUP_DIRS[@]}"; do
+      dir_name=$(basename "$backup_dir")
+      archive_path="$BACKUP_DIR/$dir_name.tar.gz"
+      
+      echo -e "${BLUE}📦 Архивируем папку $backup_dir в $archive_path...${RESET}"
+      tar -czf "$archive_path" -C "$backup_dir" . || {
+        echo -e "${YELLOW}⚠️ Ошибка при архивации. Пробуем с sudo...${RESET}"
+        sudo tar -czf "$archive_path" -C "$backup_dir" .
+      }
+      
+      # Удаляем папку после архивации
+      rm -rf "$backup_dir" || sudo rm -rf "$backup_dir"
+      
+      echo -e "${GREEN}✅ Папка с бэкапом архивирована в $archive_path${RESET}"
+    done
+  else
+    echo -e "${GREEN}✅ Предыдущих папок с бэкапами не обнаружено${RESET}"
+  fi
+}
 
 # Обработка действия backup - только создание резервной копии
 if [[ "$ACTION" == "backup" ]]; then
@@ -311,6 +349,9 @@ if [[ "$ACTION" == "backup" ]]; then
     echo -e "${RED}❌ Окружение .myshell не найдено. Нечего сохранять.${RESET}"
     exit 1
   fi
+  
+  # Архивируем предыдущие бэкапы
+  archive_previous_backups
   
   # Создаем директорию для резервных копий
   mkdir -p "$BACKUP_DIR" || {
@@ -372,6 +413,7 @@ if [[ "$ACTION" == "plugins" ]]; then
   if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" ]]; then
     echo "🔄 Обновляем zsh-syntax-highlighting..."
     (cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" && git pull) || {
+      echo -e "${YELLOW}⚠️ Не удалось обновить плагин. Пробуем переустановить...${RESET}"
       rm -rf "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"
       git clone "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"
     }
@@ -388,6 +430,7 @@ if [[ "$ACTION" == "plugins" ]]; then
   if [[ -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
     echo "🔄 Обновляем PaperColor тему..."
     (cd "$VIM_COLORS_DIR/papercolor-theme" && git pull) || {
+      echo -e "${YELLOW}⚠️ Не удалось обновить тему. Пробуем переустановить...${RESET}"
       rm -rf "$VIM_COLORS_DIR/papercolor-theme"
       git clone "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme"
     }
@@ -398,7 +441,10 @@ if [[ "$ACTION" == "plugins" ]]; then
   fi
   
   # Обновление символической ссылки
-  ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
+  ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim" || {
+    echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
+    sudo ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
+  }
   
   echo -e "${GREEN}🎉 Плагины успешно обновлены!${RESET}"
   exit 0
@@ -436,44 +482,22 @@ if [[ -d "$BASE_DIR" ]]; then
   echo -e "${YELLOW}⚠️ Обнаружено существующее окружение .myshell${RESET}"
   
   if [[ "$SAVE_EXISTING" == "y" ]]; then
-    # Проверяем наличие предыдущих незаархивированных папок с бэкапами
-    echo -e "${BLUE}🔍 Проверка наличия предыдущей папки с бэкапом...${RESET}"
-    
-    # Ищем папки в директории бэкапов, начинающиеся с "backup_"
-    PREV_BACKUP_DIRS=()
-    while IFS= read -r dir; do
-      # Проверяем, начинается ли имя папки с "backup_"
-      dir_name=$(basename "$dir")
-      if [[ -d "$dir" && "$dir" != "$BACKUP_DIR" && "$dir_name" == backup_* ]]; then
-        PREV_BACKUP_DIRS+=("$dir")
-      fi
-    done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
-    
-    # Если найдена предыдущая папка с бэкапом, архивируем её
-    if [[ ${#PREV_BACKUP_DIRS[@]} -gt 0 ]]; then
-      echo -e "${YELLOW}⚠️ Обнаружена предыдущая папка с бэкапом${RESET}"
-      
-      # Архивируем только первую найденную папку
-      backup_dir="${PREV_BACKUP_DIRS[0]}"
-      dir_name=$(basename "$backup_dir")
-      archive_path="$BACKUP_DIR/$dir_name.tar.gz"
-      
-      echo -e "${BLUE}📦 Архивируем папку $backup_dir в $archive_path...${RESET}"
-      tar -czf "$archive_path" -C "$backup_dir" . || sudo tar -czf "$archive_path" -C "$backup_dir" .
-      
-      # Удаляем папку после архивации
-      rm -rf "$backup_dir" || sudo rm -rf "$backup_dir"
-      
-      echo -e "${GREEN}✅ Папка с бэкапом архивирована в $archive_path${RESET}"
-    fi
+    # Архивируем предыдущие бэкапы
+    archive_previous_backups
     
     # Создаем новую папку для текущего бэкапа
     echo -e "${BLUE}🗂️ Создание папки для текущего бэкапа: $DATED_BACKUP_DIR${RESET}"
-    mkdir -p "$DATED_BACKUP_DIR" || sudo mkdir -p "$DATED_BACKUP_DIR"
+    mkdir -p "$DATED_BACKUP_DIR" || {
+      echo -e "${YELLOW}⚠️ Не удалось создать директорию для текущего бэкапа. Пробуем с sudo...${RESET}"
+      sudo mkdir -p "$DATED_BACKUP_DIR"
+    }
     
     # Копируем текущее окружение .myshell (кроме папки backup)
     echo -e "${BLUE}🔄 Копирование текущего окружения в $DATED_BACKUP_DIR...${RESET}"
-    rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/" || sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"
+    rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/" || {
+      echo -e "${YELLOW}⚠️ Ошибка при копировании. Пробуем с sudo...${RESET}"
+      sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"
+    }
     echo -e "${GREEN}✅ Текущее окружение .myshell сохранено в $DATED_BACKUP_DIR${RESET}"
   else
     echo -e "${YELLOW}⚠️ Бэкап текущего окружения .myshell не был создан по выбору пользователя.${RESET}"
@@ -492,65 +516,116 @@ else
   
     if [[ "$SAVE_EXISTING" == "y" ]]; then
       echo -e "${BLUE}🗂️ Создание директорий для бэкапа...${RESET}"
-      mkdir -p "$BASE_DIR" "$BACKUP_DIR" "$DATED_BACKUP_DIR" || sudo mkdir -p "$BASE_DIR" "$BACKUP_DIR" "$DATED_BACKUP_DIR"
       
-      # Функция для безопасного копирования файла
+      # Сначала создаем базовую директорию .myshell
+      mkdir -p "$BASE_DIR" || {
+        echo -e "${YELLOW}⚠️ Не удалось создать базовую директорию. Пробуем с sudo...${RESET}"
+        sudo mkdir -p "$BASE_DIR"
+      }
+      
+      # Затем создаем директорию для резервных копий
+      mkdir -p "$BACKUP_DIR" || {
+        echo -e "${YELLOW}⚠️ Не удалось создать директорию резервных копий. Пробуем с sudo...${RESET}"
+        sudo mkdir -p "$BACKUP_DIR"
+      }
+      
+      # И наконец, директорию для текущего бэкапа
+      mkdir -p "$DATED_BACKUP_DIR" || {
+        echo -e "${YELLOW}⚠️ Не удалось создать директорию для текущего бэкапа. Пробуем с sudo...${RESET}"
+        sudo mkdir -p "$DATED_BACKUP_DIR"
+      }
+
+      # Функция для безопасного копирования файла, разыменовывающая символические ссылки
       copy_with_deref() {
         local src="$1"
         local dst="$2"
         
         if [[ -L "$src" ]]; then
-          # Если это символическая ссылка
+          # Если это символическая ссылка, проверяем, что она не битая
           local target=$(readlink -f "$src")
           if [[ -e "$target" ]]; then
             echo "🔄 Копирование файла по ссылке: $src -> $target"
             cp -pL "$src" "$dst" || sudo cp -pL "$src" "$dst"
+          else
+            echo -e "${YELLOW}⚠️ Пропускаем битую символическую ссылку: $src${RESET}"
           fi
         elif [[ -f "$src" ]]; then
           # Если это обычный файл
-          if [[ -s "$src" ]]; then
+          if [[ -s "$src" ]]; then  # Проверка на непустой файл
             echo "🔄 Копирование файла: $src"
             cp -p "$src" "$dst" || sudo cp -p "$src" "$dst"
+          else
+            echo -e "${YELLOW}⚠️ Пропускаем пустой файл: $src${RESET}"
           fi
         elif [[ -d "$src" ]]; then
           # Если это директория
           echo "🔄 Копирование директории: $src"
-          cp -a "$src" "$dst" || sudo cp -a "$src" "$dst"
+          cp -a "$src" "$dst" || {
+            echo -e "${YELLOW}⚠️ Ошибка при копировании. Пробуем с sudo...${RESET}"
+            sudo cp -a "$src" "$dst"
+          }
         fi
       }
-      
-      # Копирование конфигурационных файлов
+  
+      # Копирование конфигурационных файлов и директорий
       if [[ "$EXISTING_CONFIGS" == *"ZSH"* ]]; then
         echo "🔄 Сохранение конфигурации ZSH..."
         mkdir -p "$DATED_BACKUP_DIR/zsh"
-        [[ -e "$HOME/.zshrc" ]] && copy_with_deref "$HOME/.zshrc" "$DATED_BACKUP_DIR/zsh/"
-        if [[ -d "$HOME/.oh-my-zsh" || -L "$HOME/.oh-my-zsh" ]]; then
+        
+        if [[ -e "$HOME/.zshrc" ]]; then
+          copy_with_deref "$HOME/.zshrc" "$DATED_BACKUP_DIR/zsh/"
+        fi
+        
+        if [[ -d "$HOME/.oh-my-zsh" ]]; then
           if [[ -L "$HOME/.oh-my-zsh" ]]; then
+            echo "🔄 Обнаружена символическая ссылка .oh-my-zsh, копируем настоящую директорию"
             local omz_target=$(readlink -f "$HOME/.oh-my-zsh")
-            [[ -d "$omz_target" ]] && cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh" || sudo cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"
+            if [[ -d "$omz_target" ]]; then
+              cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh" || {
+                sudo cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"
+              }
+            else
+              echo -e "${YELLOW}⚠️ Ссылка .oh-my-zsh указывает на несуществующую директорию${RESET}"
+            fi
           else
-            cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/" || sudo cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"
+            cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/" || {
+              echo -e "${YELLOW}⚠️ Ошибка при копировании .oh-my-zsh. Пробуем с sudo...${RESET}"
+              sudo cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"
+            }
           fi
         fi
       fi
-      
+  
       if [[ "$EXISTING_CONFIGS" == *"TMUX"* ]]; then
         echo "🔄 Сохранение конфигурации TMUX..."
         mkdir -p "$DATED_BACKUP_DIR/tmux"
+        
         [[ -e "$HOME/.tmux.conf" ]] && copy_with_deref "$HOME/.tmux.conf" "$DATED_BACKUP_DIR/tmux/"
         [[ -e "$HOME/.tmux.conf.local" ]] && copy_with_deref "$HOME/.tmux.conf.local" "$DATED_BACKUP_DIR/tmux/"
       fi
-      
+  
       if [[ "$EXISTING_CONFIGS" == *"VIM"* ]]; then
         echo "🔄 Сохранение конфигурации VIM..."
         mkdir -p "$DATED_BACKUP_DIR/vim"
+        
         [[ -e "$HOME/.vimrc" ]] && copy_with_deref "$HOME/.vimrc" "$DATED_BACKUP_DIR/vim/"
+        
         if [[ -d "$HOME/.vim" || -L "$HOME/.vim" ]]; then
           if [[ -L "$HOME/.vim" ]]; then
+            echo "🔄 Обнаружена символическая ссылка .vim, копируем настоящую директорию"
             local vim_target=$(readlink -f "$HOME/.vim")
-            [[ -d "$vim_target" ]] && cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim" || sudo cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"
+            if [[ -d "$vim_target" ]]; then
+              cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim" || {
+                sudo cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"
+              }
+            else
+              echo -e "${YELLOW}⚠️ Ссылка .vim указывает на несуществующую директорию${RESET}"
+            fi
           else
-            cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/" || sudo cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"
+            cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/" || {
+              echo -e "${YELLOW}⚠️ Ошибка при копировании .vim. Пробуем с sudo...${RESET}"
+              sudo cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"
+            }
           fi
         fi
       fi
@@ -564,7 +639,7 @@ else
   fi
 fi
 
-# Пропускаем следующие блоки, если выбранное действие - update
+# Пропускаем следующие блоки, если выбранное действие - update (не нужно очищать директорию)
 if [[ "$ACTION" != "update" ]]; then
   #----------------------------------------------------
   # 🛠️ Подготовка окружения для установки
@@ -598,14 +673,15 @@ clean_ohmyzsh() {
   
   # Проверяем, что удаление прошло успешно
   if [[ -e "$HOME/.oh-my-zsh" ]]; then
-    echo -e "${RED}❌ Ошибка: Не удалось удалить Oh-My-Zsh.${RESET}"
+    echo -e "${RED}❌ Ошибка: Не удалось удалить Oh-My-Zsh. Попробуйте вручную:${RESET}"
+    echo "   rm -f $HOME/.oh-my-zsh"
     return 1
   fi
   
   return 0
 }
 
-# Функция для установки Oh-My-Zsh
+# Функция для установки Oh-My-Zsh (предполагает, что путь уже чист)
 install_ohmyzsh() {
   echo -e "${BLUE}📥 Установка Oh-My-Zsh...${RESET}"
   
@@ -618,6 +694,8 @@ install_ohmyzsh() {
     return 1
   }
   
+  # Символическая ссылка будет создана позже в блоке настройки окружения
+  
   echo -e "${GREEN}✅ Oh-My-Zsh успешно установлен${RESET}"
   return 0
 }
@@ -628,9 +706,21 @@ update_ohmyzsh() {
   
   if [[ -d "$BASE_DIR/ohmyzsh" ]]; then
     # Если Oh-My-Zsh находится в нашем окружении
-    (cd "$BASE_DIR/ohmyzsh" && git pull) || sudo -u "$USER" git -C "$BASE_DIR/ohmyzsh" pull
+    (cd "$BASE_DIR/ohmyzsh" && git pull) || {
+      echo -e "${YELLOW}⚠️ Не удалось обновить Oh-My-Zsh. Пробуем с sudo...${RESET}"
+      sudo -u "$USER" git -C "$BASE_DIR/ohmyzsh" pull
+    }
     echo -e "${GREEN}✅ Oh-My-Zsh успешно обновлен${RESET}"
     return 0
+  elif [[ -x "$HOME/.oh-my-zsh/tools/upgrade.sh" ]]; then
+    # Если это внешняя установка Oh-My-Zsh
+    # Запускаем обновление
+    export RUNZSH=no
+    export KEEP_ZSHRC=yes
+    "$HOME/.oh-my-zsh/tools/upgrade.sh" --unattended && {
+      echo -e "${GREEN}✅ Oh-My-Zsh успешно обновлен${RESET}"
+      return 0
+    }
   fi
   
   # Если обновление не удалось или скрипт отсутствует, сообщаем об ошибке
@@ -643,7 +733,9 @@ echo -e "${BLUE}📦 Настройка Oh-My-Zsh...${RESET}"
 
 if [[ "$ACTION" == "update" ]]; then
   # Если выбрано обновление, просто обновляем Oh-My-Zsh
-  update_ohmyzsh || echo -e "${YELLOW}⚠️ Не удалось обновить Oh-My-Zsh. Пропускаем...${RESET}"
+  update_ohmyzsh || {
+    echo -e "${YELLOW}⚠️ Не удалось обновить Oh-My-Zsh. Пропускаем...${RESET}"
+  }
 else
   # Во всех других случаях (установка, переустановка) - очищаем и устанавливаем заново
   clean_ohmyzsh && install_ohmyzsh || exit 1
@@ -670,6 +762,8 @@ if [[ "$ACTION" != "update" ]]; then
     elif [[ -d "$target" ]]; then
       echo -e "📁 Удаляем директорию: ${CYAN}$target${RESET}"
       rm -rf "$target" 2>/dev/null || sudo rm -rf "$target"
+    else
+      echo -e "ℹ️  Пропускаем: ${CYAN}$target${RESET} (не найден)"
     fi
   }
 
@@ -694,54 +788,108 @@ update_or_clone_repo() {
   local repo_name="$3"
   
   if [[ -d "$target_dir" && -d "$target_dir/.git" ]]; then
+    # Директория существует и это git-репозиторий, обновляем
     echo -e "${BLUE}🔄 Обновляем $repo_name...${RESET}"
-    (cd "$target_dir" && git pull) || sudo -u "$USER" git -C "$target_dir" pull
+    (cd "$target_dir" && git pull) || {
+      echo -e "${YELLOW}⚠️ Не удалось обновить $repo_name. Пробуем с sudo...${RESET}"
+      sudo -u "$USER" git -C "$target_dir" pull
+    }
   else
+    # Директория не существует или не является git-репозиторием, клонируем
     echo -e "${BLUE}📥 Клонируем $repo_name...${RESET}"
-    [[ -d "$target_dir" ]] && (rm -rf "$target_dir" || sudo rm -rf "$target_dir")
-    git clone "$repo_url" "$target_dir" || sudo git clone "$repo_url" "$target_dir"
+    
+    # Если директория существует, но не является git-репозиторием, удаляем её
+    if [[ -d "$target_dir" ]]; then
+      rm -rf "$target_dir" || sudo rm -rf "$target_dir"
+    fi
+    
+    git clone "$repo_url" "$target_dir" || {
+      echo -e "${YELLOW}⚠️ Ошибка при клонировании $repo_name. Проверяем права доступа...${RESET}"
+      sudo git clone "$repo_url" "$target_dir"
+    }
   fi
 }
 
-# Обновляем или клонируем основные репозитории
+# Обновляем или клонируем tmux конфигурацию
 update_or_clone_repo "$GIT_TMUX_REPO" "$BASE_DIR/tmux" "tmux конфигурацию"
+
+# Обновляем или клонируем dotfiles
 update_or_clone_repo "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" "dotfiles"
 
-# Директории для vim
-mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR" || sudo mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR"
+# Создаем директории для vim, если они не существуют
+mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать директории для vim. Пробуем с sudo...${RESET}"
+  sudo mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR"
+}
+
+# Обновляем или клонируем PaperColor тему
 update_or_clone_repo "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme" "PaperColor тему"
-ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim" || sudo ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
 
-# Плагины для Zsh
-mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins" || sudo mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
+# Создаем символическую ссылку для PaperColor
+ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
+  sudo ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
+}
+
+echo "📦 Устанавливаем плагины для Zsh..."
+mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать директорию для плагинов. Пробуем с sudo...${RESET}"
+  sudo mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
+}
+
+# Обновляем или клонируем zsh-autosuggestions
 update_or_clone_repo "$GIT_ZSH_AUTOSUGGESTIONS_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions"
-update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
 
+# Обновляем или клонируем zsh-syntax-highlighting
+update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
 
 #----------------------------------------------------
 # ⚙️ Настройки окружения
 #----------------------------------------------------
 
-# Создаем символические ссылки
-echo "⚙️ Настраиваем окружение..."
-ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc" || sudo ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
+echo "⚙️ Настраиваем zsh..."
+ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
+  sudo ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
+}
+
+echo "⚙️ Настраиваем vim..."
 ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc" || sudo ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc"
 ln -sfn "$VIM_DIR" "$HOME/.vim" || sudo ln -sfn "$VIM_DIR" "$HOME/.vim"
+
+echo "⚙️ Настраиваем tmux..."
 ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" || sudo ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
 ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local" || sudo ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
-ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" || sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
+
+echo "⚙️ Настраиваем Oh-My-Zsh..."
+ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
+  sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
+}
 
 # Создаем файл версии
-echo "$SCRIPT_VERSION" > "$BASE_DIR/version" || echo "$SCRIPT_VERSION" | sudo tee "$BASE_DIR/version" > /dev/null
+echo "$SCRIPT_VERSION" > "$BASE_DIR/version" || {
+  echo -e "${YELLOW}⚠️ Не удалось создать файл версии. Пробуем с sudo...${RESET}"
+  echo "$SCRIPT_VERSION" | sudo tee "$BASE_DIR/version" > /dev/null
+}
 
-# Установка ZShell по умолчанию
+#----------------------------------------------------
+# 🧰 Проверка и установка ZShell по умолчанию
+#----------------------------------------------------
 if [[ "$(basename "$SHELL")" != "zsh" ]]; then
   echo "🔁 Меняем shell на Zsh..."
   ZSH_PATH=$(which zsh)
+  # Проверяем, есть ли уже zsh в /etc/shells
   if ! grep -q "$ZSH_PATH" /etc/shells; then
+    echo -e "${YELLOW}⚠️ Добавляем $ZSH_PATH в /etc/shells...${RESET}"
     echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
   fi
-  chsh -s "$ZSH_PATH" 2>/dev/null || sudo chsh -s "$ZSH_PATH" "$USER"
+  
+  # Меняем оболочку по умолчанию с проверкой
+  if ! chsh -s "$ZSH_PATH" 2>/dev/null; then
+    echo -e "${YELLOW}⚠️ Не удалось изменить оболочку. Пробуем с sudo...${RESET}"
+    sudo chsh -s "$ZSH_PATH" "$USER"
+  fi
 else
   echo "✅ Zsh уже установлен как shell по умолчанию."
 fi
@@ -750,21 +898,32 @@ fi
 # ✅ Завершение установки
 #----------------------------------------------------
 
-# Установка прав доступа
+# Обновляем владельца всех файлов и директорий
+echo -e "${BLUE}🛠️ Установка правильных прав доступа...${RESET}"
 sudo chown -R "$USER":"$USER" "$BASE_DIR"
+
+# Проверяем, что символические ссылки существуют перед установкой прав
 for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
-  [[ -L "$link" ]] && sudo chown -h "$USER":"$USER" "$link" 2>/dev/null
+  if [[ -L "$link" ]]; then
+    sudo chown -h "$USER":"$USER" "$link" 2>/dev/null
+  fi
 done
 
-# Очистка временной директории
+#----------------------------------------------------
+# 🗑️ Очистка временной директории
+#----------------------------------------------------
 rm -rf "$HOME/init-shell" 2>/dev/null || sudo rm -rf "$HOME/init-shell"
 
-# Сообщение о завершении
+#----------------------------------------------------
+# ✅ Завершено
+#----------------------------------------------------
 echo -e "${GREEN}🎉 Установка завершена успешно!${RESET}"
+
+# Сообщаем пользователю о необходимости перезапуска сессии
 echo -e "${BLUE}ℹ️ Чтобы изменения вступили в силу, перезапустите терминал или выполните:${RESET}"
 echo -e "${CYAN}   exec zsh${RESET}"
 
-# Предложение перейти в Zsh
+# Спрашиваем, хочет ли пользователь перейти в Zsh прямо сейчас
 read -p "Хотите перейти в Zsh прямо сейчас? (y/n): " switch_to_zsh
 if [[ "$switch_to_zsh" =~ ^[Yy]$ ]]; then
   echo -e "${GREEN}👋 Переходим в Zsh...${RESET}"
@@ -772,3 +931,4 @@ if [[ "$switch_to_zsh" =~ ^[Yy]$ ]]; then
 else
   echo -e "${GREEN}👋 До свидания!${RESET}"
 fi
+
