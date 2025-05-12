@@ -243,11 +243,12 @@ show_menu() {
     # Подтверждение выбора
     #echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
     #read -p "    Продолжить? (y/n): " confirm
-# Форматирование с продолжающейся стрелкой
-echo -e "\n${BLUE}╭─── ${CYAN}Подтверждение${RESET}"
-echo -e "${BLUE}│${RESET}"
-echo -e "${BLUE}│   ${CYAN}$(get_action_description)${RESET}"
-echo -e "${BLUE}╰─── ${GREEN}▶ Продолжить? (y/n): ${RESET}"
+# Форматирование с дополнительной линией над стрелочкой
+echo -e "\n${GREEN}╭─── ${CYAN}Подтверждение${RESET}"
+echo -e "${GREEN}│${RESET}"
+echo -e "${GREEN}│    ${CYAN}$(get_action_description)${RESET}"
+echo -e "${GREEN}│${RESET}"
+echo -e "${GREEN}╰───▶ Продолжить? (y/n): ${RESET}"
 read confirm
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
