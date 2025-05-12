@@ -86,7 +86,7 @@ show_config_info() {
     local base_version=""
     if [[ -f "$BASE_DIR/version" ]]; then
       base_version=$(cat "$BASE_DIR/version")
-      echo -e "  ${BLUE}ℹ️Версия:${RESET} $base_version"
+      echo -e "  ${BLUE}ℹ️ Версия:${RESET} $base_version"
     else
       echo -e "  ${YELLOW}⚠️ Версия не определена${RESET}"
     fi
