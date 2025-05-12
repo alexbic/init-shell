@@ -776,7 +776,7 @@ update_ohmyzsh() {
       }
       echo -e "${GREEN}✅ Oh-My-Zsh успешно обновлен${RESET}"
       return 0
-    }
+    fi
   elif [[ -x "$HOME/.oh-my-zsh/tools/upgrade.sh" ]]; then
     # Если это внешняя установка Oh-My-Zsh
     echo ""  # Переход на новую строку
