@@ -372,15 +372,15 @@ archive_previous_backups() {
       dir_name=$(basename "$backup_dir")
       archive_path="$BACKUP_DIR/$dir_name.tar.gz"
       
-      print_operation "Архивируем папку $dir_name" "успешно" "CYAN"
-      
       if ! tar -czf "$archive_path" -C "$backup_dir" .; then
         if sudo tar -czf "$archive_path" -C "$backup_dir" .; then
-          print_operation "Архивация с sudo" "успешно" "GREEN"
+          print_operation "Архивируем папку $dir_name" "успешно" "GREEN"
         else
-          print_operation "Архивация" "ошибка" "RED"
+          print_operation "Архивируем папку $dir_name" "ошибка" "RED"
           continue
         fi
+      else
+        print_operation "Архивируем папку $dir_name" "успешно" "GREEN"
       fi
       
       # Удаляем папку после архивации
@@ -472,36 +472,39 @@ if [[ "$ACTION" == "backup" ]]; then
   archive_previous_backups
   
   # Создаем директорию для резервных копий
-  print_operation "Создание директории для резервных копий" "успешно" "GREEN"
   if ! mkdir -p "$BACKUP_DIR"; then
     if sudo mkdir -p "$BACKUP_DIR"; then
-      print_operation "Создание директории с sudo" "успешно" "GREEN"
+      print_operation "Создание директории для резервных копий" "успешно" "GREEN"
     else
-      print_operation "Создание директории" "ошибка" "RED"
+      print_operation "Создание директории для резервных копий" "ошибка" "RED"
       exit 1
     fi
+  else
+    print_operation "Создание директории для резервных копий" "успешно" "GREEN"
   fi
   
   # Создаем директорию для текущего бэкапа
-  print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
   if ! mkdir -p "$DATED_BACKUP_DIR"; then
     if sudo mkdir -p "$DATED_BACKUP_DIR"; then
-      print_operation "Создание директории с sudo" "успешно" "GREEN"
+      print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
     else
-      print_operation "Создание директории" "ошибка" "RED"
+      print_operation "Создание директории для текущего бэкапа" "ошибка" "RED"
       exit 1
     fi
+  else
+    print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
   fi
   
   # Копируем текущее окружение .myshell (кроме папки backup)
-  print_operation "Копирование текущего окружения" "успешно" "GREEN"
   if ! rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
     if sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
-      print_operation "Копирование с sudo" "успешно" "GREEN"
+      print_operation "Копирование текущего окружения" "успешно" "GREEN"
     else
-      print_operation "Копирование" "ошибка" "RED"
+      print_operation "Копирование текущего окружения" "ошибка" "RED"
       exit 1
     fi
+  else
+    print_operation "Копирование текущего окружения" "успешно" "GREEN"
   fi
   
   # Создаем README в директории бэкапа
@@ -527,45 +530,45 @@ if [[ "$ACTION" == "plugins" ]]; then
   
   # Обновление zsh-autosuggestions
   if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" ]]; then
-    print_operation "Обновляем zsh-autosuggestions" "успешно" "GREEN"
     if ! (cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" && git pull -q); then
-      print_operation "Ошибка обновления, переустанавливаем" "начато" "YELLOW"
+      print_operation "Ошибка обновления, переустанавливаем zsh-autosuggestions" "переустановка" "YELLOW"
       rm -rf "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"
       if git clone -q "$GIT_ZSH_AUTOSUGGESTIONS_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"; then
-        print_operation "Переустановка" "успешно" "GREEN"
+        print_operation "Переустановка zsh-autosuggestions" "успешно" "GREEN"
       else
-        print_operation "Переустановка" "ошибка" "RED"
+        print_operation "Переустановка zsh-autosuggestions" "ошибка" "RED"
       fi
+    else
+      print_operation "Обновление zsh-autosuggestions" "успешно" "GREEN"
     fi
   else
-    print_operation "Устанавливаем zsh-autosuggestions" "начато" "CYAN"
     mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
     if git clone -q "$GIT_ZSH_AUTOSUGGESTIONS_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"; then
-      print_operation "Установка" "успешно" "GREEN"
+      print_operation "Установка zsh-autosuggestions" "успешно" "GREEN"
     else
-      print_operation "Установка" "ошибка" "RED"
+      print_operation "Установка zsh-autosuggestions" "ошибка" "RED"
     fi
   fi
   
   # Обновление zsh-syntax-highlighting
   if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" ]]; then
-    print_operation "Обновляем zsh-syntax-highlighting" "успешно" "GREEN"
     if ! (cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" && git pull -q); then
-      print_operation "Ошибка обновления, переустанавливаем" "начато" "YELLOW"
+      print_operation "Ошибка обновления, переустанавливаем zsh-syntax-highlighting" "переустановка" "YELLOW"
       rm -rf "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"
       if git clone -q "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"; then
-        print_operation "Переустановка" "успешно" "GREEN"
+        print_operation "Переустановка zsh-syntax-highlighting" "успешно" "GREEN"
       else
-        print_operation "Переустановка" "ошибка" "RED"
+        print_operation "Переустановка zsh-syntax-highlighting" "ошибка" "RED"
       fi
+    else
+      print_operation "Обновление zsh-syntax-highlighting" "успешно" "GREEN"
     fi
   else
-    print_operation "Устанавливаем zsh-syntax-highlighting" "начато" "CYAN"
     mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
     if git clone -q "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"; then
-      print_operation "Установка" "успешно" "GREEN"
+      print_operation "Установка zsh-syntax-highlighting" "успешно" "GREEN"
     else
-      print_operation "Установка" "ошибка" "RED"
+      print_operation "Установка zsh-syntax-highlighting" "ошибка" "RED"
     fi
   fi
   
@@ -573,34 +576,35 @@ if [[ "$ACTION" == "plugins" ]]; then
   
   # Обновление PaperColor темы
   if [[ -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
-    print_operation "Обновляем PaperColor тему" "успешно" "GREEN"
     if ! (cd "$VIM_COLORS_DIR/papercolor-theme" && git pull -q); then
-      print_operation "Ошибка обновления, переустанавливаем" "начато" "YELLOW"
+      print_operation "Ошибка обновления, переустанавливаем PaperColor тему" "переустановка" "YELLOW"
       rm -rf "$VIM_COLORS_DIR/papercolor-theme"
       if git clone -q "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme"; then
-        print_operation "Переустановка" "успешно" "GREEN"
+        print_operation "Переустановка PaperColor темы" "успешно" "GREEN"
       else
-        print_operation "Переустановка" "ошибка" "RED"
+       print_operation "Переустановка PaperColor темы" "ошибка" "RED"
       fi
-      fi
+    else
+      print_operation "Обновление PaperColor темы" "успешно" "GREEN"
+    fi
   else
-    print_operation "Устанавливаем PaperColor тему" "начато" "CYAN"
     mkdir -p "$VIM_COLORS_DIR"
     if git clone -q "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-theme"; then
-      print_operation "Установка" "успешно" "GREEN"
+      print_operation "Установка PaperColor темы" "успешно" "GREEN"
     else
-      print_operation "Установка" "ошибка" "RED"
+      print_operation "Установка PaperColor темы" "ошибка" "RED"
     fi
   fi
   
   # Обновление символической ссылки
-  print_operation "Обновляем символическую ссылку для PaperColor" "успешно" "GREEN"
   if ! ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"; then
     if sudo ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"; then
-      print_operation "Обновление с sudo" "успешно" "GREEN"
+      print_operation "Обновление символической ссылки для PaperColor" "успешно" "GREEN"
     else
-      print_operation "Обновление" "ошибка" "RED"
+      print_operation "Обновление символической ссылки для PaperColor" "ошибка" "RED"
     fi
+  else
+    print_operation "Обновление символической ссылки для PaperColor" "успешно" "GREEN"
   fi
   
   echo -e "${GREEN}🎉 Плагины успешно обновлены!${RESET}"
@@ -622,11 +626,10 @@ for pkg in $PACKAGES; do
 done
 
 if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
-  print_operation "Установка пакетов: ${NEEDED_PACKAGES[*]}" "начато" "CYAN"
   if sudo apt update && sudo apt install -y "${NEEDED_PACKAGES[@]}"; then
-    print_operation "Установка пакетов" "успешно" "GREEN"
+    print_operation "Установка пакетов: ${NEEDED_PACKAGES[*]}" "успешно" "GREEN"
   else
-    print_operation "Установка пакетов" "ошибка" "RED"
+    print_operation "Установка пакетов: ${NEEDED_PACKAGES[*]}" "ошибка" "RED"
     echo -e "${RED}❌ Не удалось установить необходимые пакеты. Проверьте соединение и права sudo.${RESET}"
     exit 1
   fi
@@ -644,29 +647,27 @@ if [[ -d "$BASE_DIR" ]]; then
     archive_previous_backups
     
     # Создаем новую папку для текущего бэкапа
-    print_operation "Создание папки для текущего бэкапа" "начато" "CYAN"
     if ! mkdir -p "$DATED_BACKUP_DIR"; then
       if sudo mkdir -p "$DATED_BACKUP_DIR"; then
-        print_operation "Создание папки" "успешно" "GREEN"
+        print_operation "Создание папки для текущего бэкапа" "успешно" "GREEN"
       else
-        print_operation "Создание папки" "ошибка" "RED"
+        print_operation "Создание папки для текущего бэкапа" "ошибка" "RED"
         exit 1
       fi
     else
-      print_operation "Создание папки" "успешно" "GREEN"
+      print_operation "Создание папки для текущего бэкапа" "успешно" "GREEN"
     fi
     
     # Копируем текущее окружение .myshell (кроме папки backup)
-    print_operation "Копирование текущего окружения" "начато" "CYAN"
     if ! rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
       if sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
-        print_operation "Копирование" "успешно" "GREEN"
+        print_operation "Копирование текущего окружения" "успешно" "GREEN"
       else
-        print_operation "Копирование" "ошибка" "RED"
+        print_operation "Копирование текущего окружения" "ошибка" "RED"
         exit 1
       fi
     else
-      print_operation "Копирование" "успешно" "GREEN"
+      print_operation "Копирование текущего окружения" "успешно" "GREEN"
     fi
   else
     print_operation "Создание резервной копии" "пропущено" "YELLOW"
@@ -684,8 +685,6 @@ else
     print_operation "Обнаружены существующие конфигурации" "$EXISTING_CONFIGS" "YELLOW"
     
     if [[ "$SAVE_EXISTING" == "y" ]]; then
-      print_operation "Создание резервной копии существующих конфигураций" "начато" "CYAN"
-      
       # Сначала создаем базовую директорию .myshell
       if ! mkdir -p "$BASE_DIR"; then
         sudo mkdir -p "$BASE_DIR"
@@ -710,13 +709,14 @@ else
           # Если это символическая ссылка, проверяем, что она не битая
           local target=$(readlink -f "$src")
           if [[ -e "$target" ]]; then
-            print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
             if ! cp -pL "$src" "$dst"; then
               if sudo cp -pL "$src" "$dst"; then
-                print_operation "Копирование с sudo" "успешно" "GREEN"
+                print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
               else
-                print_operation "Копирование" "ошибка" "RED"
+                print_operation "Копирование файла по ссылке: $src -> $target" "ошибка" "RED"
               fi
+            else
+              print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
             fi
           else
             print_operation "Пропуск битой символической ссылки" "$src" "YELLOW"
@@ -724,33 +724,35 @@ else
         elif [[ -f "$src" ]]; then
           # Если это обычный файл
           if [[ -s "$src" ]]; then  # Проверка на непустой файл
-            print_operation "Копирование файла: $src" "успешно" "GREEN"
             if ! cp -p "$src" "$dst"; then
               if sudo cp -p "$src" "$dst"; then
-                print_operation "Копирование с sudo" "успешно" "GREEN"
+                print_operation "Копирование файла: $src" "успешно" "GREEN"
               else
-                print_operation "Копирование" "ошибка" "RED"
+                print_operation "Копирование файла: $src" "ошибка" "RED"
               fi
+            else
+              print_operation "Копирование файла: $src" "успешно" "GREEN"
             fi
           else
             print_operation "Пропуск пустого файла" "$src" "YELLOW"
           fi
         elif [[ -d "$src" ]]; then
           # Если это директория
-          print_operation "Копирование директории: $src" "успешно" "GREEN"
           if ! cp -a "$src" "$dst"; then
             if sudo cp -a "$src" "$dst"; then
-              print_operation "Копирование с sudo" "успешно" "GREEN"
+              print_operation "Копирование директории: $src" "успешно" "GREEN"
             else
-              print_operation "Копирование" "ошибка" "RED"
+              print_operation "Копирование директории: $src" "ошибка" "RED"
             fi
+          else
+            print_operation "Копирование директории: $src" "успешно" "GREEN"
           fi
         fi
       }
 
       # Копирование конфигурационных файлов и директорий
       if [[ "$EXISTING_CONFIGS" == *"ZSH"* ]]; then
-        print_operation "Сохранение конфигурации ZSH" "начато" "CYAN"
+        print_operation "Сохранение конфигурации ZSH" "выполняется" "CYAN"
         mkdir -p "$DATED_BACKUP_DIR/zsh"
         
         if [[ -e "$HOME/.zshrc" ]]; then
@@ -759,28 +761,29 @@ else
         
         if [[ -d "$HOME/.oh-my-zsh" ]]; then
           if [[ -L "$HOME/.oh-my-zsh" ]]; then
-            print_operation "Обнаружена символическая ссылка .oh-my-zsh" "начато" "CYAN"
             local omz_target=$(readlink -f "$HOME/.oh-my-zsh")
             if [[ -d "$omz_target" ]]; then
-              print_operation "Копирование .oh-my-zsh -> $omz_target" "успешно" "GREEN"
               if ! cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"; then
                 if sudo cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"; then
-                  print_operation "Копирование с sudo" "успешно" "GREEN"
+                  print_operation "Копирование .oh-my-zsh -> $omz_target" "успешно" "GREEN"
                 else
-                  print_operation "Копирование" "ошибка" "RED"
+                  print_operation "Копирование .oh-my-zsh -> $omz_target" "ошибка" "RED"
                 fi
+              else
+                print_operation "Копирование .oh-my-zsh -> $omz_target" "успешно" "GREEN"
               fi
             else
               print_operation "Ссылка .oh-my-zsh указывает на несуществующую директорию" "$omz_target" "YELLOW"
             fi
           else
-            print_operation "Копирование .oh-my-zsh" "успешно" "GREEN"
             if ! cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"; then
               if sudo cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"; then
-                print_operation "Копирование с sudo" "успешно" "GREEN"
+                print_operation "Копирование .oh-my-zsh" "успешно" "GREEN"
               else
-                print_operation "Копирование" "ошибка" "RED"
+                print_operation "Копирование .oh-my-zsh" "ошибка" "RED"
               fi
+            else
+              print_operation "Копирование .oh-my-zsh" "успешно" "GREEN"
             fi
           fi
         fi
@@ -788,7 +791,7 @@ else
       fi
   
       if [[ "$EXISTING_CONFIGS" == *"TMUX"* ]]; then
-        print_operation "Сохранение конфигурации TMUX" "начато" "CYAN"
+        print_operation "Сохранение конфигурации TMUX" "выполняется" "CYAN"
         mkdir -p "$DATED_BACKUP_DIR/tmux"
         
         [[ -e "$HOME/.tmux.conf" ]] && copy_with_deref "$HOME/.tmux.conf" "$DATED_BACKUP_DIR/tmux/"
@@ -797,35 +800,36 @@ else
       fi
   
       if [[ "$EXISTING_CONFIGS" == *"VIM"* ]]; then
-        print_operation "Сохранение конфигурации VIM" "начато" "CYAN"
+        print_operation "Сохранение конфигурации VIM" "выполняется" "CYAN"
         mkdir -p "$DATED_BACKUP_DIR/vim"
         
         [[ -e "$HOME/.vimrc" ]] && copy_with_deref "$HOME/.vimrc" "$DATED_BACKUP_DIR/vim/"
         
         if [[ -d "$HOME/.vim" || -L "$HOME/.vim" ]]; then
           if [[ -L "$HOME/.vim" ]]; then
-            print_operation "Обнаружена символическая ссылка .vim" "начато" "CYAN"
             local vim_target=$(readlink -f "$HOME/.vim")
             if [[ -d "$vim_target" ]]; then
-              print_operation "Копирование .vim -> $vim_target" "успешно" "GREEN"
               if ! cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"; then
                 if sudo cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"; then
-                  print_operation "Копирование с sudo" "успешно" "GREEN"
+                  print_operation "Копирование .vim -> $vim_target" "успешно" "GREEN"
                 else
-                  print_operation "Копирование" "ошибка" "RED"
+                  print_operation "Копирование .vim -> $vim_target" "ошибка" "RED"
                 fi
+              else
+                print_operation "Копирование .vim -> $vim_target" "успешно" "GREEN"
               fi
             else
               print_operation "Ссылка .vim указывает на несуществующую директорию" "$vim_target" "YELLOW"
             fi
           else
-            print_operation "Копирование .vim" "успешно" "GREEN"
             if ! cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"; then
               if sudo cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"; then
-                print_operation "Копирование с sudo" "успешно" "GREEN"
+                print_operation "Копирование .vim" "успешно" "GREEN"
               else
-                print_operation "Копирование" "ошибка" "RED"
+                print_operation "Копирование .vim" "ошибка" "RED"
               fi
+            else
+              print_operation "Копирование .vim" "успешно" "GREEN"
             fi
           fi
         fi
@@ -841,16 +845,15 @@ else
   fi
   
   # Создание базовых директорий
-  print_operation "Создание базовой директории .myshell" "начато" "CYAN"
   if ! mkdir -p "$BASE_DIR"; then
     if sudo mkdir -p "$BASE_DIR"; then
-      print_operation "Создание базовой директории" "успешно" "GREEN"
+      print_operation "Создание базовой директории .myshell" "успешно" "GREEN"
     else
-      print_operation "Создание базовой директории" "ошибка" "RED"
+      print_operation "Создание базовой директории .myshell" "ошибка" "RED"
       exit 1
     fi
   else
-    print_operation "Создание базовой директории" "успешно" "GREEN"
+    print_operation "Создание базовой директории .myshell" "успешно" "GREEN"
   fi
 fi
 
@@ -863,7 +866,6 @@ if [[ "$ACTION" != "update" ]]; then
   print_group_header "🧹 Очистка окружения"
   
   # Очищаем содержимое директории .myshell (кроме директории backup)
-  print_operation "Очистка директории .myshell" "начато" "CYAN"
   if ! find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 rm -rf 2>/dev/null; then
     if sudo find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 sudo rm -rf; then
       print_operation "Очистка директории .myshell" "успешно" "GREEN"
@@ -881,37 +883,34 @@ if [[ "$ACTION" != "update" ]]; then
     
     # Проверяем тип элемента и удаляем соответственно
     if [[ -L "$target" ]]; then
-      print_operation "Удаление символической ссылки: $item" "начато" "CYAN"
       if ! rm "$target" 2>/dev/null; then
         if sudo rm "$target"; then
-          print_operation "Удаление символической ссылки" "успешно" "GREEN"
+          print_operation "Удаление символической ссылки: $item" "успешно" "GREEN"
         else
-          print_operation "Удаление символической ссылки" "ошибка" "RED"
+          print_operation "Удаление символической ссылки: $item" "ошибка" "RED"
         fi
       else
-        print_operation "Удаление символической ссылки" "успешно" "GREEN"
+        print_operation "Удаление символической ссылки: $item" "успешно" "GREEN"
       fi
     elif [[ -f "$target" ]]; then
-      print_operation "Удаление файла: $item" "начато" "CYAN"
       if ! rm "$target" 2>/dev/null; then
         if sudo rm "$target"; then
-          print_operation "Удаление файла" "успешно" "GREEN"
+          print_operation "Удаление файла: $item" "успешно" "GREEN"
         else
-          print_operation "Удаление файла" "ошибка" "RED"
+          print_operation "Удаление файла: $item" "ошибка" "RED"
         fi
       else
-        print_operation "Удаление файла" "успешно" "GREEN"
+        print_operation "Удаление файла: $item" "успешно" "GREEN"
       fi
     elif [[ -d "$target" ]]; then
-      print_operation "Удаление директории: $item" "начато" "CYAN"
       if ! rm -rf "$target" 2>/dev/null; then
         if sudo rm -rf "$target"; then
-          print_operation "Удаление директории" "успешно" "GREEN"
+          print_operation "Удаление директории: $item" "успешно" "GREEN"
         else
-          print_operation "Удаление директории" "ошибка" "RED"
+          print_operation "Удаление директории: $item" "ошибка" "RED"
         fi
       else
-        print_operation "Удаление директории" "успешно" "GREEN"
+        print_operation "Удаление директории: $item" "успешно" "GREEN"
       fi
     else
       print_operation "Проверка $item" "не найдено" "YELLOW"
@@ -919,7 +918,7 @@ if [[ "$ACTION" != "update" ]]; then
   }
   
   # Удаление старых конфигов и симлинков
-  print_operation "Удаление старых конфигурационных файлов" "начато" "CYAN"
+  print_operation "Удаление старых конфигурационных файлов" "выполняется" "CYAN"
   
   for item in $TRASH; do
     # Эта часть использует патерны шелла для поиска
@@ -991,8 +990,6 @@ update_or_clone_repo() {
 }
 
 # Установка Oh-My-Zsh
-print_operation "Установка Oh-My-Zsh" "начато" "CYAN"
-
 if [[ "$ACTION" == "update" ]]; then
   # Обновление Oh-My-Zsh
   if [[ -d "$BASE_DIR/ohmyzsh" ]]; then
@@ -1025,7 +1022,6 @@ update_or_clone_repo "$GIT_TMUX_REPO" "$BASE_DIR/tmux" "tmux конфигура�
 update_or_clone_repo "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" "dotfiles"
 
 # Создание директорий для vim
-print_operation "Создание директорий для vim" "начато" "CYAN"
 if mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR"; then
   print_operation "Создание директорий для vim" "успешно" "GREEN"
 else
@@ -1046,7 +1042,6 @@ update_or_clone_repo "$GIT_VIM_PAPERCOLOR_REPO" "$VIM_COLORS_DIR/papercolor-them
 print_group_header "🧩 Установка плагинов"
 
 # Создание директории для плагинов Zsh
-print_operation "Создание директории для плагинов Zsh" "начато" "CYAN"
 if mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"; then
   print_operation "Создание директории для плагинов Zsh" "успешно" "GREEN"
 else
@@ -1068,7 +1063,6 @@ update_or_clone_repo "$GIT_ZSH_SYNTAX_HIGHLIGHTING_REPO" "$BASE_DIR/ohmyzsh/cust
 print_group_header "⚙️ Настройка окружения"
 
 # Создание символической ссылки для PaperColor
-print_operation "Создание символической ссылки для PaperColor" "начато" "CYAN"
 if ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"; then
   print_operation "Создание символической ссылки для PaperColor" "успешно" "GREEN"
 else
@@ -1080,7 +1074,6 @@ else
 fi
 
 # Настройка zsh
-print_operation "Настройка zsh" "начато" "CYAN"
 if ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"; then
   print_operation "Настройка zsh" "успешно" "GREEN"
 else
@@ -1092,7 +1085,6 @@ else
 fi
 
 # Настройка vim
-print_operation "Настройка vim" "начато" "CYAN"
 if ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc" && ln -sfn "$VIM_DIR" "$HOME/.vim"; then
   print_operation "Настройка vim" "успешно" "GREEN"
 else
@@ -1104,7 +1096,6 @@ else
 fi
 
 # Настройка tmux
-print_operation "Настройка tmux" "начато" "CYAN"
 if ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" && ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"; then
   print_operation "Настройка tmux" "успешно" "GREEN"
 else
@@ -1116,7 +1107,6 @@ else
 fi
 
 # Настройка Oh-My-Zsh
-print_operation "Настройка Oh-My-Zsh" "начато" "CYAN"
 if ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"; then
   print_operation "Настройка Oh-My-Zsh" "успешно" "GREEN"
 else
@@ -1128,7 +1118,6 @@ else
 fi
 
 # Создание файла версии
-print_operation "Создание файла версии" "начато" "CYAN"
 if echo "$SCRIPT_VERSION" > "$BASE_DIR/version"; then
   print_operation "Создание файла версии" "успешно" "GREEN"
 else
@@ -1149,7 +1138,6 @@ if [[ "$(basename "$SHELL")" != "zsh" ]]; then
   ZSH_PATH=$(which zsh)
   # Проверяем, есть ли уже zsh в /etc/shells
   if ! grep -q "$ZSH_PATH" /etc/shells; then
-    print_operation "Добавление zsh в /etc/shells" "начато" "CYAN"
     if echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null; then
       print_operation "Добавление zsh в /etc/shells" "успешно" "GREEN"
     else
@@ -1160,19 +1148,17 @@ if [[ "$(basename "$SHELL")" != "zsh" ]]; then
   fi
   
   # Меняем оболочку по умолчанию с проверкой
-  print_operation "Установка Zsh в качестве оболочки по умолчанию" "начато" "CYAN"
   if chsh -s "$ZSH_PATH" 2>/dev/null; then
     print_operation "Установка Zsh по умолчанию" "успешно" "GREEN"
   else
     if sudo chsh -s "$ZSH_PATH" "$USER"; then
-        print_operation "Установка Zsh по умолчанию с sudo" "успешно" "GREEN"
-      else
-        print_operation "Установка Zsh по умолчанию" "ошибка" "RED"
-      fi
+      print_operation "Установка Zsh по умолчанию с sudo" "успешно" "GREEN"
+    else
+      print_operation "Установка Zsh по умолчанию" "ошибка" "RED"
     fi
-  else
-    print_operation "Проверка текущей оболочки" "Zsh уже используется" "GREEN"
   fi
+else
+  print_operation "Проверка текущей оболочки" "Zsh уже используется" "GREEN"
 fi
 
 #----------------------------------------------------
@@ -1182,7 +1168,6 @@ fi
 print_group_header "✅ Завершение установки"
 
 # Установка правильных прав доступа
-print_operation "Установка прав доступа для директории .myshell" "начато" "CYAN"
 if sudo chown -R "$USER":"$USER" "$BASE_DIR"; then
   print_operation "Установка прав доступа для директории .myshell" "успешно" "GREEN"
 else
@@ -1201,7 +1186,6 @@ for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME
 done
 
 # Очистка временной директории
-print_operation "Очистка временной директории" "начато" "CYAN"
 if rm -rf "$HOME/init-shell" 2>/dev/null || sudo rm -rf "$HOME/init-shell"; then
   print_operation "Очистка временной директории" "успешно" "GREEN"
 else
@@ -1246,9 +1230,3 @@ if [[ "$switch_to_zsh" =~ ^[Yy]$ ]]; then
 else
   echo -e "${GREEN}👋 До свидания!${RESET}"
 fi
-
-      
-
-
-
-      
