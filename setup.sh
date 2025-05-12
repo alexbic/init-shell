@@ -242,7 +242,6 @@ show_menu() {
     
     # Подтверждение выбора
     echo -e "\n${BLUE}${CYAN}$(get_action_description)${RESET}"
-    echo -e "\n"
     read -p "    Продолжить? (y/n): " confirm
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
