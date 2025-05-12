@@ -1686,7 +1686,8 @@ case $ACTION in
     echo -e "  ${GREEN}✓${RESET} Dotfiles"
     echo -e "  ${GREEN}✓${RESET} Плагины"
     ;;
-fi
+
+    esac
 
 # Нижняя часть рамки и предупреждение
 echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
