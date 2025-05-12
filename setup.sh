@@ -23,6 +23,10 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BACKUP_DIR="$BASE_DIR/backup"
 DATED_BACKUP_DIR="$BACKUP_DIR/backup_$TIMESTAMP"
 
+# Константы для управления резервными копиями
+MAX_BACKUPS=10  # Максимальное количество хранимых копий (не включая первоначальную)
+INITIAL_BACKUP_NAME="initial_backup"  # Имя для первоначальной копии
+
 # 🧹 Шаблоны файлов для очистки
 TRASH=".zsh* .tmux* .vim* .oh-my-zsh*"
 
@@ -112,6 +116,20 @@ print_success() {
 # Функция для вывода ошибки (в том же формате, что и операции)
 print_error() {
   print_message_with_dots "└─→" "$1" "$2" "RED" "  "
+}
+
+# Простая функция для центрирования текста
+center_text() {
+  local text="$1"
+  local width=70 # Ширина содержимого внутри рамки
+  local padding=$(( (width - ${#text}) / 2 ))
+  
+  # Проверка на отрицательное значение padding
+  if (( padding < 0 )); then
+    padding=0
+  fi
+  
+  printf "%${padding}s%s%${padding}s" "" "$text" ""
 }
 
 #----------------------------------------------------
@@ -243,111 +261,234 @@ get_action_description() {
   esac
 }
 
-# Функция для отображения меню опций
-show_menu() {
-  local has_myshell=$([[ -d "$BASE_DIR" ]] && echo "true" || echo "false")
-  local choice=""
-  local confirm=""
+# Функция для отображения информации о существующем окружении
+show_environment_status() {
+  local result=""
   
-  while true; do
-    clear
-    show_logo
-    show_config_info
+  if [[ -d "$BASE_DIR" ]]; then
+    result="${result}${GREEN}✓ Окружение MYSHELL установлено${RESET}\n"
     
-    echo -e "${BLUE}⚙️ Выберите действие:${RESET}\n"
-    
-    if [[ "$has_myshell" == "true" ]]; then
-      echo -e "  ${CYAN}1)${RESET} 🔄 Обновить окружение ${CYAN}MYSHELL${RESET}"
-      echo -e "  ${CYAN}2)${RESET} 🔁 Переустановить окружение ${CYAN}MYSHELL${RESET} (с сохранением текущих настроек)"
-      echo -e "  ${CYAN}3)${RESET} 🆕 Полная переустановка окружения ${CYAN}MYSHELL${RESET} (без сохранения настроек)"
-      echo -e "  ${CYAN}4)${RESET} 🧩 Добавить/обновить только плагины"
-      echo -e "  ${CYAN}5)${RESET} 💾 Создать резервную копию настроек"
-      echo -e "  ${CYAN}0)${RESET} 🚪 Выход без изменений\n"
+    # Информация о версии
+    if [[ -f "$BASE_DIR/version" ]]; then
+      local version=$(cat "$BASE_DIR/version")
+      result="${result}${GREEN}✓ Версия: $version${RESET}\n"
     else
-      echo -e "  ${CYAN}1)${RESET} 📥 Установить окружение ${CYAN}MYSHELL${RESET}"
-      echo -e "  ${CYAN}2)${RESET} 🔐 Установить с сохранением текущих настроек"
-      echo -e "  ${CYAN}0)${RESET} 🚪 Выход без изменений\n"
+      result="${result}${YELLOW}⚠️ Версия не определена${RESET}\n"
     fi
     
-    read -p "🔢 Ваш выбор [0-$([ "$has_myshell" == "true" ] && echo "5" || echo "2")]: " choice
+    # Информация о компонентах
+    result="${result}${BLUE}📋 Установленные компоненты:${RESET}\n"
+    [[ -d "$BASE_DIR/ohmyzsh" ]] && result="${result}  ${GREEN}✓ Oh-My-Zsh${RESET}\n" || result="${result}  ${RED}✗ Oh-My-Zsh (отсутствует)${RESET}\n"
+    [[ -d "$BASE_DIR/tmux" ]] && result="${result}  ${GREEN}✓ Tmux${RESET}\n" || result="${result}  ${RED}✗ Tmux (отсутствует)${RESET}\n"
+    [[ -d "$BASE_DIR/vim" ]] && result="${result}  ${GREEN}✓ Vim${RESET}\n" || result="${result}  ${RED}✗ Vim (отсутствует)${RESET}\n"
+    [[ -d "$BASE_DIR/dotfiles" ]] && result="${result}  ${GREEN}✓ Dotfiles${RESET}\n" || result="${result}  ${RED}✗ Dotfiles (отсутствуют)${RESET}\n"
+  else
+    result="${result}${YELLOW}⚠️ Окружение MYSHELL не установлено${RESET}\n"
     
-    # Проверяем выбор пользователя
-    if [[ "$has_myshell" == "true" ]]; then
-      case $choice in
-        1) # Обновить окружение
-          ACTION="update"
-          SAVE_EXISTING="y"
-          ;;
-        2) # Переустановить с сохранением настроек
-          ACTION="reinstall"
-          SAVE_EXISTING="y"
-          ;;
-        3) # Полная переустановка
-          ACTION="reinstall"
-          SAVE_EXISTING="n"
-          ;;
-        4) # Добавить/обновить плагины
-          ACTION="plugins"
-          SAVE_EXISTING="y"
-          ;;
-        5) # Создать резервную копию
-          ACTION="backup"
-          SAVE_EXISTING="y"
-          ;;
-        0|q|Q|exit|quit) # Выход
-          echo -e "\n${GREEN}👋 До свидания!${RESET}"
-          exit 0
-          ;;
-        *) # Некорректный выбор
-          echo -e "\n${RED}❌ Некорректный выбор. Пожалуйста, выберите действие из списка.${RESET}"
-          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
-          continue
-          ;;
-      esac
-    else
-      case $choice in
-        1) # Установить окружение
-          ACTION="install"
-          SAVE_EXISTING="n"
-          ;;
-        2) # Установить с сохранением текущих настроек
-          ACTION="install"
-          SAVE_EXISTING="y"
-          ;;
-        0|q|Q|exit|quit) # Выход
-          echo -e "\n${GREEN}👋 До свидания!${RESET}"
-          exit 0
-          ;;
-        *) # Некорректный выбор
-          echo -e "\n${RED}❌ Некорректный выбор. Пожалуйста, выберите действие из списка.${RESET}"
-          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
-          continue
-          ;;
-      esac
-    fi
-    
-    # Подтверждение выбора
-    echo -e "\n${GREEN}╭─── ${CYAN}$(get_action_description)${RESET}"
-    echo -e "${GREEN}│${RESET}"
-    echo -en "${GREEN}╰─── ▶  Продолжить? (y/n): ${RESET}"
-    read confirm
-    
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
-      clear
-      echo -e "\n${GREEN}⏳ Начинаем выполнение...${RESET}\n"
-      break
-    else
-      # Возвращаемся в меню
-      echo -e "\n${YELLOW}⚠️  Действие отменено, возврат в меню...${RESET}"
-      sleep 1
-      continue
-    fi
-  done
+    # Информация о существующих конфигурациях
+    result="${result}${BLUE}📋 Обнаружены конфигурации:${RESET}\n"
+    [[ -f "$HOME/.zshrc" || -d "$HOME/.oh-my-zsh" ]] && result="${result}  ${GREEN}✓ Zsh/Oh-My-Zsh${RESET}\n" || result="${result}  ${GRAY}✗ Zsh/Oh-My-Zsh${RESET}\n"
+    [[ -f "$HOME/.tmux.conf" ]] && result="${result}  ${GREEN}✓ Tmux${RESET}\n" || result="${result}  ${GRAY}✗ Tmux${RESET}\n"
+    [[ -f "$HOME/.vimrc" || -d "$HOME/.vim" ]] && result="${result}  ${GREEN}✓ Vim${RESET}\n" || result="${result}  ${GRAY}✗ Vim${RESET}\n"
+  fi
+  
+  echo -e "$result"
 }
 
-#----------------------------------------------------
-# 🔍 Архивация предыдущих резервных копий
-#----------------------------------------------------
+# Функция для отображения информации о резервных копиях
+show_backup_info() {
+  local result=""
+  
+  # Проверка наличия первоначальной копии
+  if [[ -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" || -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
+    result="${result}${GREEN}✓ Первоначальная резервная копия (до установки MYSHELL)${RESET}\n"
+  else
+    result="${result}${YELLOW}⚠️ Первоначальная резервная копия отсутствует${RESET}\n"
+  fi
+  
+  # Подсчет обычных резервных копий
+  local backup_count=0
+  local latest_backup=""
+  
+  # Директории бэкапов
+  while IFS= read -r dir; do
+    dir_name=$(basename "$dir")
+    if [[ -d "$dir" && "$dir_name" != "$INITIAL_BACKUP_NAME" && "$dir_name" == backup_* ]]; then
+      backup_count=$((backup_count + 1))
+      latest_backup="$dir_name"
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+  
+  # Архивы бэкапов
+  while IFS= read -r archive; do
+    archive_name=$(basename "$archive" .tar.gz)
+    if [[ -f "$archive" && "$archive_name" != "$INITIAL_BACKUP_NAME" && "$archive_name" == backup_* ]]; then
+      backup_count=$((backup_count + 1))
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -name "*.tar.gz" 2>/dev/null || echo "")
+  
+  if [[ $backup_count -gt 0 ]]; then
+    result="${result}${GREEN}✓ Найдено $backup_count резервных копий${RESET}\n"
+    [[ -n "$latest_backup" ]] && result="${result}${GREEN}✓ Последняя копия: $latest_backup${RESET}\n"
+  else
+    result="${result}${YELLOW}⚠️ Резервные копии отсутствуют${RESET}\n"
+  fi
+  
+  echo -e "$result"
+}
+
+# Функция для управления резервными копиями
+manage_backups() {
+  # Создаем директорию для резервных копий, если она не существует
+  if ! mkdir -p "$BACKUP_DIR"; then
+    sudo mkdir -p "$BACKUP_DIR"
+  fi
+  
+  # Проверяем, существует ли первоначальная копия
+  local has_initial_backup=$([[ -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" || -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]] && echo "true" || echo "false")
+  
+  # Если это первая установка и первоначальная копия не существует
+  if [[ "$ACTION" == "install" && "$has_initial_backup" == "false" ]]; then
+    # Создаем первоначальную копию для возможности возврата к исходным настройкам
+    mkdir -p "$BACKUP_DIR/$INITIAL_BACKUP_NAME"
+    
+    # Сохраняем все найденные конфигурационные файлы
+    for item in $TRASH; do
+      for target in $HOME/$item; do
+        if [[ -e "$target" || -L "$target" ]]; then
+          # Копируем файл или директорию
+          if [[ -L "$target" ]]; then
+            cp -aL "$target" "$BACKUP_DIR/$INITIAL_BACKUP_NAME/" 2>/dev/null || sudo cp -aL "$target" "$BACKUP_DIR/$INITIAL_BACKUP_NAME/"
+          else
+            cp -a "$target" "$BACKUP_DIR/$INITIAL_BACKUP_NAME/" 2>/dev/null || sudo cp -a "$target" "$BACKUP_DIR/$INITIAL_BACKUP_NAME/"
+          fi
+        fi
+      done
+    done
+    
+    # Добавляем README в первоначальную копию
+    echo "# Initial backup of system configuration before MYSHELL installation" > "$BACKUP_DIR/$INITIAL_BACKUP_NAME/README.md"
+    echo "Created: $(date)" >> "$BACKUP_DIR/$INITIAL_BACKUP_NAME/README.md"
+    echo "This backup contains the original system configuration and can be used to restore all settings if you decide to remove MYSHELL." >> "$BACKUP_DIR/$INITIAL_BACKUP_NAME/README.md"
+    
+    print_operation "Создание первоначальной резервной копии" "успешно" "GREEN"
+  fi
+  
+  # Подсчитываем количество обычных резервных копий (исключая первоначальную)
+  local backup_dirs=()
+  while IFS= read -r dir; do
+    dir_name=$(basename "$dir")
+    # Исключаем первоначальную копию и ищем только папки, начинающиеся с "backup_"
+    if [[ -d "$dir" && "$dir_name" != "$INITIAL_BACKUP_NAME" && "$dir_name" == backup_* ]]; then
+      backup_dirs+=("$dir")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+  
+  # Сортируем директории по дате изменения (старые идут первыми)
+  IFS=$'\n' backup_dirs=($(for d in "${backup_dirs[@]}"; do echo "$(stat -c %Y "$d") $d"; done | sort -n | cut -d' ' -f2-))
+  unset IFS
+  
+  # Если превышено максимальное количество копий, архивируем и удаляем самые старые
+  if [[ ${#backup_dirs[@]} -ge $MAX_BACKUPS ]]; then
+    # Подсчитываем, сколько нужно удалить
+    local to_remove=$((${#backup_dirs[@]} - $MAX_BACKUPS + 1))  # +1 для создания новой копии
+    
+    print_operation "Обнаружено превышение лимита резервных копий" "$to_remove для удаления" "YELLOW"
+    
+    # Удаляем самые старые копии
+    for ((i=0; i<$to_remove; i++)); do
+      local old_dir="${backup_dirs[$i]}"
+      local dir_name=$(basename "$old_dir")
+      local archive_path="$BACKUP_DIR/$dir_name.tar.gz"
+      
+      # Архивируем перед удалением
+      if ! tar -czf "$archive_path" -C "$old_dir" .; then
+        if sudo tar -czf "$archive_path" -C "$old_dir" .; then
+          print_operation "Архивация старой копии $dir_name" "успешно" "GREEN"
+        else
+          print_operation "Архивация старой копии $dir_name" "ошибка" "RED"
+          continue
+        fi
+      else
+        print_operation "Архивация старой копии $dir_name" "успешно" "GREEN"
+      fi
+      
+      # Удаляем директорию
+      if ! rm -rf "$old_dir"; then
+        if sudo rm -rf "$old_dir"; then
+          print_operation "Удаление старой копии $dir_name" "успешно" "GREEN"
+        else
+          print_operation "Удаление старой копии $dir_name" "ошибка" "RED"
+        fi
+      else
+        print_operation "Удаление старой копии $dir_name" "успешно" "GREEN"
+      fi
+    done
+  fi
+}
+
+# Функция для создания новой резервной копии
+create_backup() {
+  clear
+  print_group_header "💾 Создание новой резервной копии"
+  
+  # Проверка наличия директории .myshell
+  if [[ ! -d "$BASE_DIR" ]]; then
+    echo -e "${RED}❌ Окружение .myshell не найдено. Нечего сохранять.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Управление резервными копиями (ограничение количества)
+  manage_backups
+  
+  # Создаем директорию для резервных копий, если она не существует
+  if ! mkdir -p "$BACKUP_DIR"; then
+    if sudo mkdir -p "$BACKUP_DIR"; then
+      print_operation "Создание директории для резервных копий" "успешно" "GREEN"
+    else
+      print_operation "Создание директории для резервных копий" "ошибка" "RED"
+      read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+      return
+    fi
+  else
+    print_operation "Проверка директории для резервных копий" "успешно" "GREEN"
+  fi
+  
+  # Создаем директорию для текущего бэкапа
+  if ! mkdir -p "$DATED_BACKUP_DIR"; then
+    if sudo mkdir -p "$DATED_BACKUP_DIR"; then
+      print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
+    else
+      print_operation "Создание директории для текущего бэкапа" "ошибка" "RED"
+      read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+      return
+    fi
+  else
+    print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
+  fi
+  
+  # Копируем текущее окружение .myshell (кроме папки backup)
+  if ! rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
+    if sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
+      print_operation "Копирование текущего окружения" "успешно" "GREEN"
+    else
+      print_operation "Копирование текущего окружения" "ошибка" "RED"
+      read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+      return
+    fi
+  else
+    print_operation "Копирование текущего окружения" "успешно" "GREEN"
+  fi
+  
+  # Создаем README в директории бэкапа
+  echo "# Backup of MYSHELL environment" > "$DATED_BACKUP_DIR/README.md"
+  echo "Created: $(date)" >> "$DATED_BACKUP_DIR/README.md"
+  echo "Original directory: $BASE_DIR" >> "$DATED_BACKUP_DIR/README.md"
+  
+  print_success "Резервная копия успешно создана" "$DATED_BACKUP_DIR"
+  read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+}
 
 # Функция для архивации предыдущих бэкапов
 archive_previous_backups() {
@@ -391,6 +532,1188 @@ archive_previous_backups() {
   else
     print_operation "Предыдущие бэкапы" "не найдены" "GREEN"
   fi
+}
+
+# Функция для архивации резервных копий
+archive_backup() {
+  clear
+  print_group_header "🗜️ Архивация резервных копий"
+  
+  # Получаем список неархивированных копий
+  local backup_dirs=()
+  
+while IFS= read -r dir; do
+    dir_name=$(basename "$dir")
+    if [[ -d "$dir" && "$dir_name" != "$INITIAL_BACKUP_NAME" && "$dir_name" == backup_* ]]; then
+      local dir_date=$(stat -c %y "$dir" | cut -d' ' -f1)
+      backup_dirs+=("$dir_name|$dir_date|dir")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+  
+  # Сортируем по дате (сначала старые)
+  IFS=$'\n' backup_dirs=($(for d in "${backup_dirs[@]}"; do
+    local name=$(echo "$d" | cut -d'|' -f1)
+    local date=$(echo "$d" | cut -d'|' -f2)
+    local type=$(echo "$d" | cut -d'|' -f3)
+    echo "$date|$name|$type"
+  done | sort | awk -F'|' '{print $2"|"$1"|"$3}'))
+  unset IFS
+  
+  # Если нет копий для архивации
+  if [[ ${#backup_dirs[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ Нет резервных копий для архивации.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Выводим список копий для архивации
+  echo -e "${CYAN}Резервные копии, доступные для архивации:${RESET}\n"
+  
+  for ((i=0; i<${#backup_dirs[@]}; i++)); do
+    local name=$(echo "${backup_dirs[$i]}" | cut -d'|' -f1)
+    local date=$(echo "${backup_dirs[$i]}" | cut -d'|' -f2)
+    echo -e "  ${CYAN}$((i+1)))${RESET} ${GREEN}$name${RESET} - $date"
+  done
+  
+  echo -e "  ${CYAN}a)${RESET} ${YELLOW}Архивировать все копии${RESET}"
+  echo -e "  ${CYAN}0)${RESET} ${GRAY}Отмена${RESET}"
+  
+  # Запрашиваем выбор пользователя
+  local max_choice=${#backup_dirs[@]}
+  local choice
+  
+  while true; do
+    read -p "🔢 Выберите копию для архивации или 'a' для всех [0-$max_choice/a]: " choice
+    
+    if [[ "$choice" =~ ^[0-9]+$ && "$choice" -ge 0 && "$choice" -le "$max_choice" ]]; then
+      break
+    elif [[ "$choice" == "a" || "$choice" == "A" ]]; then
+      break
+    else
+      echo -e "${RED}❌ Некорректный выбор. Пожалуйста, введите число от 0 до $max_choice или 'a'.${RESET}"
+    fi
+  done
+  
+  # Если выбрана отмена
+  if [[ "$choice" -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ Архивация отменена.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Архивируем выбранные копии
+  if [[ "$choice" == "a" || "$choice" == "A" ]]; then
+    # Архивируем все копии
+    print_operation "Архивация всех резервных копий" "выполняется" "CYAN"
+    
+    local success_count=0
+    local error_count=0
+    
+    for ((i=0; i<${#backup_dirs[@]}; i++)); do
+      local name=$(echo "${backup_dirs[$i]}" | cut -d'|' -f1)
+      local archive_path="$BACKUP_DIR/$name.tar.gz"
+      
+      # Архивируем копию
+      if ! tar -czf "$archive_path" -C "$BACKUP_DIR/$name" .; then
+        if sudo tar -czf "$archive_path" -C "$BACKUP_DIR/$name" .; then
+          print_operation "Архивация $name" "успешно" "GREEN"
+          success_count=$((success_count + 1))
+          
+          # Удаляем исходную директорию
+          if ! rm -rf "$BACKUP_DIR/$name"; then
+            sudo rm -rf "$BACKUP_DIR/$name"
+          fi
+        else
+          print_operation "Архивация $name" "ошибка" "RED"
+          error_count=$((error_count + 1))
+        fi
+      else
+        print_operation "Архивация $name" "успешно" "GREEN"
+        success_count=$((success_count + 1))
+        
+        # Удаляем исходную директорию
+        if ! rm -rf "$BACKUP_DIR/$name"; then
+          sudo rm -rf "$BACKUP_DIR/$name"
+        fi
+      fi
+    done
+    
+    echo -e "\n${GREEN}✅ Архивация завершена: ${success_count} успешно, ${error_count} с ошибками${RESET}"
+  else
+    # Архивируем выбранную копию
+    local selected_idx=$((choice-1))
+    local selected_name=$(echo "${backup_dirs[$selected_idx]}" | cut -d'|' -f1)
+    local archive_path="$BACKUP_DIR/$selected_name.tar.gz"
+    
+    print_operation "Архивация резервной копии $selected_name" "выполняется" "CYAN"
+    
+    # Архивируем выбранную копию
+    if ! tar -czf "$archive_path" -C "$BACKUP_DIR/$selected_name" .; then
+      if sudo tar -czf "$archive_path" -C "$BACKUP_DIR/$selected_name" .; then
+        print_operation "Архивация $selected_name" "успешно" "GREEN"
+        
+        # Удаляем исходную директорию
+        if ! rm -rf "$BACKUP_DIR/$selected_name"; then
+          sudo rm -rf "$BACKUP_DIR/$selected_name"
+        fi
+      else
+        print_operation "Архивация $selected_name" "ошибка" "RED"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Архивация $selected_name" "успешно" "GREEN"
+      
+      # Удаляем исходную директорию
+      if ! rm -rf "$BACKUP_DIR/$selected_name"; then
+        sudo rm -rf "$BACKUP_DIR/$selected_name"
+      fi
+    fi
+    
+    echo -e "\n${GREEN}✅ Резервная копия ${YELLOW}$selected_name${GREEN} успешно архивирована${RESET}"
+  fi
+  
+  read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+}
+
+# Функция для удаления резервных копий
+delete_backup() {
+  clear
+  print_group_header "🗑️ Удаление резервных копий"
+  
+  # Получаем список всех копий (кроме первоначальной)
+  local available_backups=()
+  
+  # Директории
+  while IFS= read -r dir; do
+    dir_name=$(basename "$dir")
+    if [[ -d "$dir" && "$dir_name" != "$INITIAL_BACKUP_NAME" && "$dir_name" == backup_* ]]; then
+      local dir_date=$(stat -c %y "$dir" | cut -d' ' -f1)
+      available_backups+=("$dir_name|$dir_date|dir|Резервная копия от $dir_date")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+  
+  # Архивы
+  while IFS= read -r archive; do
+    archive_name=$(basename "$archive" .tar.gz)
+    if [[ -f "$archive" && "$archive_name" != "$INITIAL_BACKUP_NAME" && "$archive_name" == backup_* ]]; then
+      local archive_date=$(stat -c %y "$archive" | cut -d' ' -f1)
+      available_backups+=("$archive_name|$archive_date|archive|Резервная копия от $archive_date (архив)")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -name "*.tar.gz" 2>/dev/null || echo "")
+  
+  # Сортируем по дате (сначала старые)
+  IFS=$'\n' available_backups=($(for d in "${available_backups[@]}"; do
+    local name=$(echo "$d" | cut -d'|' -f1)
+    local date=$(echo "$d" | cut -d'|' -f2)
+    local type=$(echo "$d" | cut -d'|' -f3)
+    local desc=$(echo "$d" | cut -d'|' -f4)
+    echo "$date|$name|$type|$desc"
+  done | sort | awk -F'|' '{print $2"|"$1"|"$3"|"$4}'))
+  unset IFS
+  
+  # Если нет копий для удаления
+  if [[ ${#available_backups[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ Нет резервных копий для удаления.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Выводим список копий для удаления
+  echo -e "${CYAN}Резервные копии, доступные для удаления:${RESET}\n"
+  
+  for ((i=0; i<${#available_backups[@]}; i++)); do
+    local name=$(echo "${available_backups[$i]}" | cut -d'|' -f1)
+    local date=$(echo "${available_backups[$i]}" | cut -d'|' -f2)
+    local type=$(echo "${available_backups[$i]}" | cut -d'|' -f3)
+    local desc=$(echo "${available_backups[$i]}" | cut -d'|' -f4)
+    
+    if [[ "$type" == "dir" ]]; then
+      echo -e "  ${CYAN}$((i+1)))${RESET} ${GREEN}$desc${RESET} - $date"
+    else
+      echo -e "  ${CYAN}$((i+1)))${RESET} ${YELLOW}$desc${RESET} - $date"
+    fi
+  done
+  
+  echo -e "  ${CYAN}a)${RESET} ${RED}Удалить все копии${RESET}"
+  echo -e "  ${CYAN}0)${RESET} ${GRAY}Отмена${RESET}"
+  
+  # Запрашиваем выбор пользователя
+  local max_choice=${#available_backups[@]}
+  local choice
+  
+  while true; do
+    read -p "🔢 Выберите копию для удаления или 'a' для всех [0-$max_choice/a]: " choice
+    
+    if [[ "$choice" =~ ^[0-9]+$ && "$choice" -ge 0 && "$choice" -le "$max_choice" ]]; then
+      break
+    elif [[ "$choice" == "a" || "$choice" == "A" ]]; then
+      break
+    else
+      echo -e "${RED}❌ Некорректный выбор. Пожалуйста, введите число от 0 до $max_choice или 'a'.${RESET}"
+    fi
+  done
+  
+  # Если выбрана отмена
+  if [[ "$choice" -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ Удаление отменено.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Удаляем выбранные копии
+  if [[ "$choice" == "a" || "$choice" == "A" ]]; then
+    # Запрашиваем дополнительное подтверждение для удаления всех копий
+    echo -e "\n${RED}⚠️ ВНИМАНИЕ!${RESET} Вы собираетесь удалить ${RED}ВСЕ${RESET} резервные копии (${#available_backups[@]} шт.)."
+    read -p "Вы АБСОЛЮТНО уверены? Это действие НЕВОЗМОЖНО отменить! (введите 'yes'): " confirm
+    
+    if [[ "$confirm" != "yes" ]]; then
+      echo -e "${YELLOW}⚠️ Удаление отменено.${RESET}"
+      read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+      return
+    fi
+    
+    # Удаляем все копии
+    print_operation "Удаление всех резервных копий" "выполняется" "RED"
+    
+    local success_count=0
+    local error_count=0
+    
+    for ((i=0; i<${#available_backups[@]}; i++)); do
+      local name=$(echo "${available_backups[$i]}" | cut -d'|' -f1)
+      local type=$(echo "${available_backups[$i]}" | cut -d'|' -f3)
+      
+      if [[ "$type" == "dir" ]]; then
+        # Удаляем директорию
+        if ! rm -rf "$BACKUP_DIR/$name"; then
+          if sudo rm -rf "$BACKUP_DIR/$name"; then
+            print_operation "Удаление директории $name" "успешно" "GREEN"
+            success_count=$((success_count + 1))
+          else
+            print_operation "Удаление директории $name" "ошибка" "RED"
+            error_count=$((error_count + 1))
+          fi
+        else
+          print_operation "Удаление директории $name" "успешно" "GREEN"
+          success_count=$((success_count + 1))
+        fi
+      else
+        # Удаляем архив
+        if ! rm -f "$BACKUP_DIR/$name.tar.gz"; then
+          if sudo rm -f "$BACKUP_DIR/$name.tar.gz"; then
+            print_operation "Удаление архива $name.tar.gz" "успешно" "GREEN"
+            success_count=$((success_count + 1))
+          else
+            print_operation "Удаление архива $name.tar.gz" "ошибка" "RED"
+            error_count=$((error_count + 1))
+          fi
+        else
+          print_operation "Удаление архива $name.tar.gz" "успешно" "GREEN"
+          success_count=$((success_count + 1))
+        fi
+      fi
+    done
+    
+    echo -e "\n${GREEN}✅ Удаление завершено: ${success_count} успешно, ${error_count} с ошибками${RESET}"
+  else
+    # Удаляем выбранную копию
+    local selected_idx=$((choice-1))
+    local selected_name=$(echo "${available_backups[$selected_idx]}" | cut -d'|' -f1)
+    local selected_type=$(echo "${available_backups[$selected_idx]}" | cut -d'|' -f3)
+    local selected_desc=$(echo "${available_backups[$selected_idx]}" | cut -d'|' -f4)
+    
+    # Запрашиваем подтверждение
+    echo -e "\n${YELLOW}⚠️ Внимание!${RESET} Вы собираетесь удалить резервную копию:"
+    echo -e "${GREEN}$selected_desc${RESET}"
+    
+    read -p "Вы уверены? Это действие невозможно отменить! (y/n): " confirm
+    
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+      echo -e "${YELLOW}⚠️ Удаление отменено.${RESET}"
+      read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+      return
+    fi
+    
+    if [[ "$selected_type" == "dir" ]]; then
+      # Удаляем директорию
+      print_operation "Удаление директории $selected_name" "выполняется" "CYAN"
+      
+      if ! rm -rf "$BACKUP_DIR/$selected_name"; then
+        if sudo rm -rf "$BACKUP_DIR/$selected_name"; then
+          print_operation "Удаление директории $selected_name" "успешно" "GREEN"
+        else
+          print_operation "Удаление директории $selected_name" "ошибка" "RED"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+          return
+        fi
+      else
+        print_operation "Удаление директории $selected_name" "успешно" "GREEN"
+      fi
+    else
+      # Удаляем архив
+      print_operation "Удаление архива $selected_name.tar.gz" "выполняется" "CYAN"
+      
+      if ! rm -f "$BACKUP_DIR/$selected_name.tar.gz"; then
+        if sudo rm -f "$BACKUP_DIR/$selected_name.tar.gz"; then
+          print_operation "Удаление архива $selected_name.tar.gz" "успешно" "GREEN"
+        else
+          print_operation "Удаление архива $selected_name.tar.gz" "ошибка" "RED"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+          return
+        fi
+      else
+        print_operation "Удаление архива $selected_name.tar.gz" "успешно" "GREEN"
+      fi
+    fi
+    
+    echo -e "\n${GREEN}✅ Резервная копия ${YELLOW}$selected_desc${GREEN} успешно удалена${RESET}"
+  fi
+  
+  read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+}
+
+# Функция для настройки параметров резервного копирования
+configure_backup() {
+  clear
+  print_group_header "⚙️ Настройка параметров резервного копирования"
+  
+  # Верхняя часть рамки
+  echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
+  echo -e "${CYAN}│${RESET}               ${YELLOW}НАСТРОЙКА РЕЗЕРВНОГО КОПИРОВАНИЯ${RESET}               ${CYAN}│${RESET}"
+  echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+  
+  # Текущие настройки
+  echo -e "${CYAN}│${RESET} ${BLUE}🔧 Текущие настройки:${RESET}                                        ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}   • Максимальное количество хранимых копий: ${YELLOW}$MAX_BACKUPS${RESET}              ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}   • Директория резервных копий: ${YELLOW}$BACKUP_DIR${RESET}       ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+  echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+  
+  # Доступные настройки
+  echo -e "${CYAN}│${RESET} ${BLUE}📋 Доступные параметры для настройки:${RESET}                         ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}   ${CYAN}1)${RESET} Изменить максимальное количество хранимых копий             ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}   ${CYAN}2)${RESET} Изменить директорию для резервных копий                    ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}   ${CYAN}0)${RESET} Вернуться назад                                          ${CYAN}│${RESET}"
+  echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+  echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+  
+  # Запрос выбора
+  local choice
+  read -p "🔢 Ваш выбор [0-2]: " choice
+  
+  case $choice in
+    1) # Изменить максимальное количество копий
+      local new_max
+      echo -e "\n${BLUE}📊 Текущее максимальное количество копий: ${YELLOW}$MAX_BACKUPS${RESET}"
+      
+      while true; do
+        read -p "Введите новое значение (1-100, рекомендуется 5-10): " new_max
+        
+        if [[ "$new_max" =~ ^[0-9]+$ && "$new_max" -ge 1 && "$new_max" -le 100 ]]; then
+          # Сохраняем в конфигурационный файл
+          echo "MAX_BACKUPS=$new_max" > "$BASE_DIR/backup_config"
+          MAX_BACKUPS=$new_max
+          
+          print_success "Максимальное количество копий изменено" "$new_max"
+          break
+        else
+          echo -e "${RED}❌ Некорректное значение. Пожалуйста, введите число от 1 до 100.${RESET}"
+        fi
+      done
+      ;;
+      
+    2) # Изменить директорию для резервных копий
+      local new_dir
+      echo -e "\n${BLUE}📂 Текущая директория для резервных копий: ${YELLOW}$BACKUP_DIR${RESET}"
+      echo -e "${YELLOW}⚠️ ВНИМАНИЕ!${RESET} Изменение директории не перемещает существующие копии."
+      
+      read -p "Введите новый путь (абсолютный) или пустую строку для отмены: " new_dir
+      
+      if [[ -n "$new_dir" ]]; then
+        # Проверяем, что путь абсолютный
+        if [[ "$new_dir" != /* ]]; then
+          echo -e "${RED}❌ Путь должен быть абсолютным (начинаться с /).${RESET}"
+        else
+          # Создаем директорию, если она не существует
+          if ! mkdir -p "$new_dir"; then
+            if sudo mkdir -p "$new_dir"; then
+              print_operation "Создание новой директории" "успешно" "GREEN"
+            else
+              print_operation "Создание новой директории" "ошибка" "RED"
+              read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+              return
+            fi
+          fi
+          
+          # Устанавливаем правильные права доступа
+          if ! sudo chown -R "$USER":"$USER" "$new_dir"; then
+            print_warning "Не удалось установить права доступа к директории" "пропущено"
+          fi
+          
+          # Сохраняем в конфигурационный файл
+          echo "BACKUP_DIR=$new_dir" >> "$BASE_DIR/backup_config"
+          BACKUP_DIR=$new_dir
+          
+          print_success "Директория для резервных копий изменена" "$new_dir"
+        fi
+      else
+        echo -e "${YELLOW}⚠️ Операция отменена.${RESET}"
+      fi
+      ;;
+      
+    0|"") # Вернуться назад
+      return
+      ;;
+      
+    *) # Некорректный выбор
+      echo -e "${RED}❌ Некорректный выбор.${RESET}"
+      ;;
+  esac
+  
+  read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+}
+
+# Функция для восстановления из резервной копии
+restore_backup() {
+  clear
+  print_group_header "🔄 Восстановление из резервной копии"
+  
+  # Получаем список всех доступных резервных копий
+  local available_backups=()
+  
+  # Добавляем первоначальную копию, если она существует
+  if [[ -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" ]]; then
+    local initial_date=$(stat -c %y "$BACKUP_DIR/$INITIAL_BACKUP_NAME" | cut -d' ' -f1)
+    available_backups+=("$INITIAL_BACKUP_NAME|$initial_date|dir|Первоначальная копия (до установки MYSHELL)")
+  elif [[ -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
+    local initial_date=$(stat -c %y "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" | cut -d' ' -f1)
+    available_backups+=("$INITIAL_BACKUP_NAME|$initial_date|archive|Первоначальная копия (архив)")
+  fi
+  
+  # Добавляем обычные резервные копии
+  while IFS= read -r dir; do
+    dir_name=$(basename "$dir")
+    if [[ -d "$dir" && "$dir_name" != "$INITIAL_BACKUP_NAME" && "$dir_name" == backup_* ]]; then
+      local dir_date=$(stat -c %y "$dir" | cut -d' ' -f1)
+      available_backups+=("$dir_name|$dir_date|dir|Резервная копия от $dir_date")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+  
+  # Добавляем архивы
+  while IFS= read -r archive; do
+    archive_name=$(basename "$archive" .tar.gz)
+    if [[ -f "$archive" && "$archive_name" != "$INITIAL_BACKUP_NAME" && "$archive_name" == backup_* ]]; then
+      local archive_date=$(stat -c %y "$archive" | cut -d' ' -f1)
+      available_backups+=("$archive_name|$archive_date|archive|Резервная копия от $archive_date (архив)")
+    fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -name "*.tar.gz" 2>/dev/null || echo "")
+  
+  # Сортируем по дате (сначала новые)
+  IFS=$'\n' available_backups=($(for d in "${available_backups[@]}"; do
+    local name=$(echo "$d" | cut -d'|' -f1)
+    local date=$(echo "$d" | cut -d'|' -f2)
+    local type=$(echo "$d" | cut -d'|' -f3)
+    local desc=$(echo "$d" | cut -d'|' -f4)
+    echo "$date|$name|$type|$desc"
+  done | sort -r | awk -F'|' '{print $2"|"$1"|"$3"|"$4}'))
+  unset IFS
+  
+  # Выводим список доступных копий
+  echo -e "${CYAN}Доступные резервные копии:${RESET}\n"
+  
+  for ((i=0; i<${#available_backups[@]}; i++)); do
+    local name=$(echo "${available_backups[$i]}" | cut -d'|' -f1)
+    local date=$(echo "${available_backups[$i]}" | cut -d'|' -f2)
+    local type=$(echo "${available_backups[$i]}" | cut -d'|' -f3)
+    local desc=$(echo "${available_backups[$i]}" | cut -d'|' -f4)
+    
+    if [[ "$type" == "dir" ]]; then
+      echo -e "  ${CYAN}$((i+1)))${RESET} ${GREEN}$desc${RESET} - $date"
+    else
+      echo -e "  ${CYAN}$((i+1)))${RESET} ${YELLOW}$desc${RESET} - $date"
+    fi
+  done
+  
+  echo -e "  ${CYAN}0)${RESET} ${GRAY}Отмена${RESET}"
+  
+  # Запрашиваем выбор пользователя
+  local max_choice=${#available_backups[@]}
+  local choice
+  
+  while true; do
+    read -p "🔢 Выберите копию для восстановления [0-$max_choice]: " choice
+    
+    if [[ "$choice" =~ ^[0-9]+$ && "$choice" -ge 0 && "$choice" -le "$max_choice" ]]; then
+      break
+    else
+      echo -e "${RED}❌ Некорректный выбор. Пожалуйста, введите число от 0 до $max_choice.${RESET}"
+    fi
+  done
+  
+  # Если выбрана отмена
+  if [[ "$choice" -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ Восстановление отменено.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Получаем данные о выбранной копии
+  local selected_idx=$((choice-1))
+  local selected_name=$(echo "${available_backups[$selected_idx]}" | cut -d'|' -f1)
+  local selected_type=$(echo "${available_backups[$selected_idx]}" | cut -d'|' -f3)
+  local selected_desc=$(echo "${available_backups[$selected_idx]}" | cut -d'|' -f4)
+
+  # Запрашиваем подтверждение
+  echo -e "\n${YELLOW}⚠️ Внимание!${RESET} Восстановление из резервной копии заменит текущие настройки."
+  echo -e "Вы выбрали: ${GREEN}$selected_desc${RESET}"
+  
+  read -p "Вы уверены, что хотите продолжить? (y/n): " confirm
+  
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}⚠️ Восстановление отменено.${RESET}"
+    read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+    return
+  fi
+  
+  # Создаем временную резервную копию текущего состояния
+  local tmp_backup_dir="$BACKUP_DIR/tmp_backup_before_restore"
+  print_operation "Создание временной копии текущего состояния" "выполняется" "CYAN"
+  
+  if ! mkdir -p "$tmp_backup_dir"; then
+    if sudo mkdir -p "$tmp_backup_dir"; then
+      print_operation "Создание временной директории" "успешно" "GREEN"
+    else
+      print_operation "Создание временной директории" "ошибка" "RED"
+      read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+      return
+    fi
+  fi
+  
+  # Копируем текущее окружение во временную директорию
+  if [[ -d "$BASE_DIR" ]]; then
+    if ! rsync -a --exclude 'backup/' "$BASE_DIR/" "$tmp_backup_dir/"; then
+      if sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$tmp_backup_dir/"; then
+        print_operation "Создание временной копии" "успешно" "GREEN"
+      else
+        print_operation "Создание временной копии" "ошибка" "RED"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Создание временной копии" "успешно" "GREEN"
+    fi
+  fi
+  
+  # Процесс восстановления зависит от типа выбранной копии
+  if [[ "$selected_type" == "dir" ]]; then
+    # Восстановление из директории
+    print_operation "Восстановление из директории $selected_name" "выполняется" "CYAN"
+    
+    # Очищаем текущую директорию .myshell (кроме backup)
+    if ! find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 rm -rf 2>/dev/null; then
+      if sudo find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 sudo rm -rf; then
+        print_operation "Очистка текущей директории" "успешно" "GREEN"
+      else
+        print_operation "Очистка текущей директории" "ошибка" "RED"
+        print_error "Восстановление прервано" "ошибка при очистке"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Очистка текущей директории" "успешно" "GREEN"
+    fi
+    
+    # Копируем содержимое резервной копии
+    if ! rsync -a "$BACKUP_DIR/$selected_name/" "$BASE_DIR/"; then
+      if sudo rsync -a "$BACKUP_DIR/$selected_name/" "$BASE_DIR/"; then
+        print_operation "Копирование из резервной копии" "успешно" "GREEN"
+      else
+        # В случае ошибки восстанавливаем из временной копии
+        print_operation "Копирование из резервной копии" "ошибка" "RED"
+        print_operation "Откат к предыдущему состоянию" "выполняется" "CYAN"
+        
+        if ! rsync -a "$tmp_backup_dir/" "$BASE_DIR/"; then
+          sudo rsync -a "$tmp_backup_dir/" "$BASE_DIR/"
+        fi
+        
+        print_error "Восстановление прервано" "ошибка при копировании"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Копирование из резервной копии" "успешно" "GREEN"
+    fi
+  else
+    # Восстановление из архива
+    print_operation "Восстановление из архива $selected_name.tar.gz" "выполняется" "CYAN"
+    
+    # Создаем временную директорию для распаковки архива
+    local extract_dir="$BACKUP_DIR/tmp_extract"
+    
+    if ! mkdir -p "$extract_dir"; then
+      if sudo mkdir -p "$extract_dir"; then
+        print_operation "Создание временной директории для распаковки" "успешно" "GREEN"
+      else
+        print_operation "Создание временной директории для распаковки" "ошибка" "RED"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Создание временной директории для распаковки" "успешно" "GREEN"
+    fi
+    
+    # Распаковываем архив
+    if ! tar -xzf "$BACKUP_DIR/$selected_name.tar.gz" -C "$extract_dir"; then
+      if sudo tar -xzf "$BACKUP_DIR/$selected_name.tar.gz" -C "$extract_dir"; then
+        print_operation "Распаковка архива" "успешно" "GREEN"
+      else
+        print_operation "Распаковка архива" "ошибка" "RED"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Распаковка архива" "успешно" "GREEN"
+    fi
+    
+    # Очищаем текущую директорию .myshell (кроме backup)
+    if ! find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 rm -rf 2>/dev/null; then
+      if sudo find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 sudo rm -rf; then
+        print_operation "Очистка текущей директории" "успешно" "GREEN"
+      else
+        print_operation "Очистка текущей директории" "ошибка" "RED"
+        print_error "Восстановление прервано" "ошибка при очистке"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Очистка текущей директории" "успешно" "GREEN"
+    fi
+    
+    # Копируем распакованное содержимое
+    if ! rsync -a "$extract_dir/" "$BASE_DIR/"; then
+      if sudo rsync -a "$extract_dir/" "$BASE_DIR/"; then
+        print_operation "Копирование распакованных файлов" "успешно" "GREEN"
+      else
+        # В случае ошибки восстанавливаем из временной копии
+        print_operation "Копирование распакованных файлов" "ошибка" "RED"
+        print_operation "Откат к предыдущему состоянию" "выполняется" "CYAN"
+        
+        if ! rsync -a "$tmp_backup_dir/" "$BASE_DIR/"; then
+          sudo rsync -a "$tmp_backup_dir/" "$BASE_DIR/"
+        fi
+        
+        print_error "Восстановление прервано" "ошибка при копировании"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        return
+      fi
+    else
+      print_operation "Копирование распакованных файлов" "успешно" "GREEN"
+    fi
+    
+    # Удаляем временную директорию для распаковки
+    if ! rm -rf "$extract_dir"; then
+      sudo rm -rf "$extract_dir"
+    fi
+  fi
+  
+  # Удаляем временную резервную копию
+  if ! rm -rf "$tmp_backup_dir"; then
+    sudo rm -rf "$tmp_backup_dir"
+  fi
+  
+  # Устанавливаем правильные права доступа
+  if ! sudo chown -R "$USER":"$USER" "$BASE_DIR"; then
+    print_warning "Не удалось установить права доступа к директории" "пропущено"
+  fi
+  
+  # Обновляем символические ссылки
+  if [[ -d "$BASE_DIR/dotfiles" && -f "$BASE_DIR/dotfiles/.zshrc" ]]; then
+    ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc" 2>/dev/null || sudo ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
+    print_operation "Обновление символической ссылки .zshrc" "успешно" "GREEN"
+  fi
+  
+  if [[ -d "$BASE_DIR/tmux" && -f "$BASE_DIR/tmux/.tmux.conf" ]]; then
+    ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" 2>/dev/null || sudo ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
+    print_operation "Обновление символической ссылки .tmux.conf" "успешно" "GREEN"
+  fi
+  
+  if [[ -d "$BASE_DIR/dotfiles" && -f "$BASE_DIR/dotfiles/.tmux.conf.local" ]]; then
+    ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local" 2>/dev/null || sudo ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
+    print_operation "Обновление символической ссылки .tmux.conf.local" "успешно" "GREEN"
+  fi
+  
+  if [[ -d "$BASE_DIR/dotfiles" && -f "$BASE_DIR/dotfiles/.vimrc" ]]; then
+    ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc" 2>/dev/null || sudo ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc"
+    print_operation "Обновление символической ссылки .vimrc" "успешно" "GREEN"
+  fi
+  
+  if [[ -d "$BASE_DIR/vim" ]]; then
+    ln -sfn "$BASE_DIR/vim" "$HOME/.vim" 2>/dev/null || sudo ln -sfn "$BASE_DIR/vim" "$HOME/.vim"
+    print_operation "Обновление символической ссылки .vim" "успешно" "GREEN"
+  fi
+  
+  if [[ -d "$BASE_DIR/ohmyzsh" ]]; then
+    ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" 2>/dev/null || sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
+    print_operation "Обновление символической ссылки .oh-my-zsh" "успешно" "GREEN"
+  fi
+  
+  print_success "Восстановление из резервной копии" "успешно завершено"
+  echo -e "${GREEN}✅ Настройки успешно восстановлены из резервной копии: ${YELLOW}$selected_desc${RESET}"
+  read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+}
+
+# Функция для меню резервного копирования
+backup_menu() {
+  local choice=""
+  
+  while true; do
+    clear
+    show_logo
+    
+    # Верхняя часть рамки
+    echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
+    echo -e "${CYAN}│${RESET}                 ${YELLOW}УПРАВЛЕНИЕ РЕЗЕРВНЫМИ КОПИЯМИ${RESET}                 ${CYAN}│${RESET}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    
+    # Информация о резервных копиях
+    echo -e "${CYAN}│${RESET} ${BLUE}📊 Информация о резервных копиях:${RESET}                             ${CYAN}│${RESET}"
+    
+    # Проверка наличия директории для бэкапов
+    if [[ ! -d "$BACKUP_DIR" ]]; then
+      echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Директория для резервных копий отсутствует${RESET}               ${CYAN}│${RESET}"
+      echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Необходимо сначала создать хотя бы одну резервную копию${RESET}  ${CYAN}│${RESET}"
+    else
+      # Проверка наличия первоначальной копии
+      if [[ -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" ]]; then
+        local initial_date=$(stat -c %y "$BACKUP_DIR/$INITIAL_BACKUP_NAME" | cut -d' ' -f1)
+        echo -e "${CYAN}│${RESET} ${GREEN}✓ Первоначальная копия${RESET} - $initial_date                      ${CYAN}│${RESET}"
+      elif [[ -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
+        local initial_date=$(stat -c %y "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" | cut -d' ' -f1)
+        echo -e "${CYAN}│${RESET} ${GREEN}✓ Первоначальная копия${RESET} - $initial_date (архив)              ${CYAN}│${RESET}"
+      else
+        echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Первоначальная копия отсутствует${RESET}                         ${CYAN}│${RESET}"
+      fi
+      
+      # Получаем список обычных резервных копий
+      local backup_dirs=()
+      while IFS= read -r dir; do
+        dir_name=$(basename "$dir")
+        if [[ -d "$dir" && "$dir_name" != "$INITIAL_BACKUP_NAME" && "$dir_name" == backup_* ]]; then
+          local dir_date=$(stat -c %y "$dir" | cut -d' ' -f1)
+          backup_dirs+=("$dir_name|$dir_date|dir")
+        fi
+      done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null || echo "")
+      
+      # Добавляем архивы
+      while IFS= read -r archive; do
+        archive_name=$(basename "$archive" .tar.gz)
+        if [[ -f "$archive" && "$archive_name" != "$INITIAL_BACKUP_NAME" && "$archive_name" == backup_* ]]; then
+          local archive_date=$(stat -c %y "$archive" | cut -d' ' -f1)
+          backup_dirs+=("$archive_name|$archive_date|archive")
+        fi
+      done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -name "*.tar.gz" 2>/dev/null || echo "")
+      
+      # Сортируем копии по дате (сначала новые)
+      IFS=$'\n' backup_dirs=($(for d in "${backup_dirs[@]}"; do
+        local name=$(echo "$d" | cut -d'|' -f1)
+        local date=$(echo "$d" | cut -d'|' -f2)
+        local type=$(echo "$d" | cut -d'|' -f3)
+        echo "$date|$name|$type"
+      done | sort -r | awk -F'|' '{print $2"|"$1"|"$3}'))
+      unset IFS
+      
+      # Выводим информацию о копиях
+      if [[ ${#backup_dirs[@]} -gt 0 ]]; then
+        echo -e "${CYAN}│${RESET} ${GREEN}✓ Найдено ${#backup_dirs[@]} резервных копий:${RESET}                       ${CYAN}│${RESET}"
+        
+        # Выводим максимум 5 копий
+        local max_show=$((${#backup_dirs[@]} > 5 ? 5 : ${#backup_dirs[@]}))
+        for ((i=0; i<$max_show; i++)); do
+          local name=$(echo "${backup_dirs[$i]}" | cut -d'|' -f1)
+          local date=$(echo "${backup_dirs[$i]}" | cut -d'|' -f2)
+          local type=$(echo "${backup_dirs[$i]}" | cut -d'|' -f3)
+          
+          if [[ "$type" == "dir" ]]; then
+            echo -e "${CYAN}│${RESET}   ${GREEN}•${RESET} $name - $date                        ${CYAN}│${RESET}"
+          else
+            echo -e "${CYAN}│${RESET}   ${YELLOW}•${RESET} $name - $date (архив)               ${CYAN}│${RESET}"
+          fi
+        done
+        
+        # Если больше 5 копий, показываем сообщение о других
+        if [[ ${#backup_dirs[@]} -gt 5 ]]; then
+          local remaining=$((${#backup_dirs[@]} - 5))
+          echo -e "${CYAN}│${RESET}   ${GRAY}...и еще $remaining копий${RESET}                                ${CYAN}│${RESET}"
+        fi
+      else
+        echo -e "${CYAN}│${RESET} ${YELLOW}⚠️  Резервные копии отсутствуют${RESET}                              ${CYAN}│${RESET}"
+      fi
+    fi
+    
+    # Разделитель
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    
+    # Меню доступных действий
+    echo -e "${CYAN}│${RESET} ${BLUE}📋 Доступные действия:${RESET}                                       ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET}   ${CYAN}1)${RESET} 📥 Создать новую резервную копию                         ${CYAN}│${RESET}"
+    
+    # Пункт восстановления активен только если есть копии
+    if [[ ${#backup_dirs[@]} -gt 0 || -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" || -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
+      echo -e "${CYAN}│${RESET}   ${CYAN}2)${RESET} 🔄 Восстановить из резервной копии                       ${CYAN}│${RESET}"
+    else
+      echo -e "${CYAN}│${RESET}   ${GRAY}2)${RESET} ${GRAY}🔄 Восстановить из резервной копии (недоступно)${RESET}      ${CYAN}│${RESET}"
+    fi
+    
+    # Пункт архивации доступен, если есть неархивированные копии
+    if [[ ${#backup_dirs[@]} -gt 0 ]]; then
+      echo -e "${CYAN}│${RESET}   ${CYAN}3)${RESET} 🗜️  Архивировать старые копии                            ${CYAN}│${RESET}"
+      echo -e "${CYAN}│${RESET}   ${CYAN}4)${RESET} 🗑️  Удалить выбранные копии                              ${CYAN}│${RESET}"
+    else
+      echo -e "${CYAN}│${RESET}   ${GRAY}3)${RESET} ${GRAY}🗜️  Архивировать старые копии (недоступно)${RESET}           ${CYAN}│${RESET}"
+      echo -e "${CYAN}│${RESET}   ${GRAY}4)${RESET} ${GRAY}🗑️  Удалить выбранные копии (недоступно)${RESET}             ${CYAN}│${RESET}"
+    fi
+    
+    echo -e "${CYAN}│${RESET}   ${CYAN}5)${RESET} ⚙️  Настроить параметры резервного копирования             ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET}   ${CYAN}0)${RESET} 🔙 Вернуться в главное меню                               ${CYAN}│${RESET}"
+    
+    # Нижняя часть рамки
+    echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+    
+    # Запрос выбора
+    echo ""
+    read -p "🔢 Ваш выбор [0-5]: " choice
+    
+    case $choice in
+      1) # Создать новую резервную копию
+        create_backup
+        ;;
+      2) # Восстановить из копии
+        if [[ ${#backup_dirs[@]} -gt 0 || -d "$BACKUP_DIR/$INITIAL_BACKUP_NAME" || -f "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" ]]; then
+          restore_backup
+        else
+          echo -e "\n${YELLOW}⚠️ Нет доступных резервных копий для восстановления.${RESET}"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        fi
+        ;;
+      3) # Архивировать копии
+        if [[ ${#backup_dirs[@]} -gt 0 ]]; then
+          archive_backup
+        else
+          echo -e "\n${YELLOW}⚠️ Нет резервных копий для архивации.${RESET}"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        fi
+        ;;
+      4) # Удалить копии
+        if [[ ${#backup_dirs[@]} -gt 0 ]]; then
+          delete_backup
+        else
+          echo -e "\n${YELLOW}⚠️ Нет резервных копий для удаления.${RESET}"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        fi
+        ;;
+      5) # Настройки резервного копирования
+        configure_backup
+        ;;
+      0|q|Q|exit|quit) # Выход в главное меню
+        return
+        ;;
+      *) # Некорректный выбор
+        echo -e "\n${RED}❌ Некорректный выбор. Пожалуйста, выберите действие из списка.${RESET}"
+        read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+        ;;
+    esac
+  done
+}
+
+# Обновленная функция отображения меню опций
+show_menu() {
+  local has_myshell=$([[ -d "$BASE_DIR" ]] && echo "true" || echo "false")
+  local choice=""
+  local confirm=""
+  
+  while true; do
+    clear
+    show_logo
+    show_config_info
+    
+    echo -e "${BLUE}⚙️ Выберите действие:${RESET}\n"
+    
+    if [[ "$has_myshell" == "true" ]]; then
+      echo -e "  ${CYAN}1)${RESET} 🔄 Обновить окружение ${CYAN}MYSHELL${RESET}"
+      echo -e "  ${CYAN}2)${RESET} 🔁 Переустановить окружение ${CYAN}MYSHELL${RESET} (с сохранением текущих настроек)"
+      echo -e "  ${CYAN}3)${RESET} 🆕 Полная переустановка окружения ${CYAN}MYSHELL${RESET} (без сохранения настроек)"
+      echo -e "  ${CYAN}4)${RESET} 🧩 Добавить/обновить только плагины"
+      echo -e "  ${CYAN}5)${RESET} 💾 Управление резервными копиями"
+      echo -e "  ${CYAN}0)${RESET} 🚪 Выход без изменений\n"
+    else
+      echo -e "  ${CYAN}1)${RESET} 📥 Установить окружение ${CYAN}MYSHELL${RESET}"
+      echo -e "  ${CYAN}2)${RESET} 🔐 Установить с сохранением текущих настроек"
+      echo -e "  ${CYAN}0)${RESET} 🚪 Выход без изменений\n"
+    fi
+    
+    read -p "🔢 Ваш выбор [0-$([ "$has_myshell" == "true" ] && echo "5" || echo "2")]: " choice
+    
+    # Проверяем выбор пользователя
+    if [[ "$has_myshell" == "true" ]]; then
+      case $choice in
+        1) # Обновить окружение
+          ACTION="update"
+          SAVE_EXISTING="y"
+          ;;
+        2) # Переустановить с сохранением настроек
+          ACTION="reinstall"
+          SAVE_EXISTING="y"
+          ;;
+        3) # Полная переустановка
+          ACTION="reinstall"
+          SAVE_EXISTING="n"
+          ;;
+        4) # Добавить/обновить плагины
+          ACTION="plugins"
+          SAVE_EXISTING="y"
+          ;;
+        5) # Управление резервными копиями
+          ACTION="backup"
+          SAVE_EXISTING="y"
+          # Сразу вызываем backup_menu вместо подтверждения
+          backup_menu
+          continue
+          ;;
+        0|q|Q|exit|quit) # Выход
+          echo -e "\n${GREEN}👋 До свидания!${RESET}"
+          exit 0
+          ;;
+        *) # Некорректный выбор
+          echo -e "\n${RED}❌ Некорректный выбор. Пожалуйста, выберите действие из списка.${RESET}"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+          continue
+          ;;
+      esac
+    else
+      case $choice in
+        1) # Установить окружение
+          ACTION="install"
+          SAVE_EXISTING="n"
+          ;;
+        2) # Установить с сохранением текущих настроек
+          ACTION="install"
+          SAVE_EXISTING="y"
+          ;;
+        0|q|Q|exit|quit) # Выход
+          echo -e "\n${GREEN}👋 До свидания!${RESET}"
+          exit 0
+          ;;
+        *) # Некорректный выбор
+          echo -e "\n${RED}❌ Некорректный выбор. Пожалуйста, выберите действие из списка.${RESET}"
+          read -p "⏳ Нажмите Enter, чтобы продолжить..." dummy
+          continue
+          ;;
+      esac
+    fi
+
+    # Создаем красивую рамку с информацией о выбранном действии
+    clear
+    show_logo
+    
+    # Получаем описание действия 
+    local action_desc=$(get_action_description)
+    
+    # Определяем заголовок рамки в зависимости от выбранного действия
+    local action_title=""
+    case $ACTION in
+      "update") 
+        action_title="ОБНОВЛЕНИЕ ОКРУЖЕНИЯ MYSHELL"
+        ;;
+      "reinstall") 
+        if [[ "$SAVE_EXISTING" == "y" ]]; then
+          action_title="ПЕРЕУСТАНОВКА С СОХРАНЕНИЕМ НАСТРОЕК"
+        else
+          action_title="ПОЛНАЯ ПЕРЕУСТАНОВКА ОКРУЖЕНИЯ"
+        fi
+        ;;
+      "install")
+        if [[ "$SAVE_EXISTING" == "y" ]]; then
+          action_title="УСТАНОВКА С СОХРАНЕНИЕМ НАСТРОЕК"
+        else
+          action_title="ЧИСТАЯ УСТАНОВКА ОКРУЖЕНИЯ"
+        fi
+        ;;
+      "plugins") 
+        action_title="ОБНОВЛЕНИЕ ПЛАГИНОВ"
+        ;;
+      "backup") 
+        action_title="СОЗДАНИЕ РЕЗЕРВНОЙ КОПИИ"
+        ;;
+    esac
+    
+    # Верхняя часть рамки
+    echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
+    echo -e "${CYAN}│${RESET}                         ${YELLOW}$action_title${RESET}                         ${CYAN}│${RESET}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    echo -e "${CYAN}│${RESET} ${YELLOW}$(center_text "$action_desc")${RESET} ${CYAN}│${RESET}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    
+    # В зависимости от действия, добавляем разные блоки информации в рамку
+    case $ACTION in
+      "update") 
+        echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
+        IFS=$'\n'
+        for line in $(show_environment_status); do
+          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+        done
+        unset IFS
+        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация об обновлении:${RESET}                                ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Все компоненты будут обновлены до последних версий с GitHub.    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Ваши настройки будут сохранены.                                ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Все изменения будут применены сразу же.                        ${CYAN}│${RESET}"
+        ;;
+        
+      "reinstall") 
+        echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
+        IFS=$'\n'
+        for line in $(show_environment_status); do
+          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+        done
+        unset IFS
+        
+        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация о переустановке:${RESET}                               ${CYAN}│${RESET}"
+        if [[ "$SAVE_EXISTING" == "y" ]]; then
+          echo -e "${CYAN}│${RESET} • Резервная копия текущих настроек будет сохранена.               ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} • Окружение MYSHELL будет полностью переустановлено.              ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} • Ваши настройки и плагины будут восстановлены.                  ${CYAN}│${RESET}"
+        else
+          echo -e "${CYAN}│${RESET} ${RED}⚠️  Резервная копия НЕ будет создана!${RESET}                         ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} ${RED}⚠️  Все ваши текущие настройки будут потеряны!${RESET}                ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} ${RED}⚠️  Окружение будет установлено с нуля!${RESET}                       ${CYAN}│${RESET}"
+        fi
+        ;;
+        
+      "install")
+        echo -e "${CYAN}│${RESET} ${BLUE}📊 Текущее состояние системы:${RESET}                                ${CYAN}│${RESET}"
+        IFS=$'\n'
+        for line in $(show_environment_status); do
+          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+        done
+        unset IFS
+        
+        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация об установке:${RESET}                                  ${CYAN}│${RESET}"
+        if [[ "$SAVE_EXISTING" == "y" ]]; then
+          echo -e "${CYAN}│${RESET} • Будет создана резервная копия ваших текущих настроек.          ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} • Окружение MYSHELL будет установлено с сохранением настроек.     ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} • По окончании можно будет переключиться на Zsh.                 ${CYAN}│${RESET}"
+        else
+          echo -e "${CYAN}│${RESET} ${RED}⚠️  Резервная копия НЕ будет создана!${RESET}                         ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} ${RED}⚠️  Все ваши текущие настройки будут заменены!${RESET}                ${CYAN}│${RESET}"
+          echo -e "${CYAN}│${RESET} • Окружение MYSHELL будет установлено с настройками по умолчанию.${CYAN}│${RESET}"
+        fi
+        ;;
+        
+      "plugins") 
+        echo -e "${CYAN}│${RESET} ${BLUE}📊 Информация о плагинах:${RESET}                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        
+        # Проверим наличие плагинов и их версии
+        if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" ]]; then
+          local asg_version=$(cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" && git describe --tags 2>/dev/null || echo "неизвестно")
+          echo -e "${CYAN}│${RESET} ${GREEN}✓ zsh-autosuggestions${RESET} - версия: $asg_version               ${CYAN}│${RESET}"
+        else
+          echo -e "${CYAN}│${RESET} ${RED}✗ zsh-autosuggestions${RESET} - будет установлен                     ${CYAN}│${RESET}"
+        fi
+        
+        if [[ -d "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" ]]; then
+          local syn_version=$(cd "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" && git describe --tags 2>/dev/null || echo "неизвестно")
+          echo -e "${CYAN}│${RESET} ${GREEN}✓ zsh-syntax-highlighting${RESET} - версия: $syn_version           ${CYAN}│${RESET}"
+        else
+          echo -e "${CYAN}│${RESET} ${RED}✗ zsh-syntax-highlighting${RESET} - будет установлен                 ${CYAN}│${RESET}"
+        fi
+        
+        if [[ -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
+          local pc_version=$(cd "$VIM_COLORS_DIR/papercolor-theme" && git describe --tags 2>/dev/null || echo "неизвестно")
+          echo -e "${CYAN}│${RESET} ${GREEN}✓ PaperColor${RESET} - версия: $pc_version                         ${CYAN}│${RESET}"
+        else
+          echo -e "${CYAN}│${RESET} ${RED}✗ PaperColor${RESET} - будет установлен                             ${CYAN}│${RESET}"
+        fi
+        
+        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Операция обновления плагинов:${RESET}                              ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Все плагины будут обновлены до последних версий.                ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Основные компоненты останутся без изменений.                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Обновление безопасно и не затронет ваши настройки.              ${CYAN}│${RESET}"
+        ;;
+        
+      "backup") 
+        echo -e "${CYAN}│${RESET} ${BLUE}📊 Информация о резервных копиях:${RESET}                             ${CYAN}│${RESET}"
+        IFS=$'\n'
+        for line in $(show_backup_info); do
+          echo -e "${CYAN}│${RESET} $line ${CYAN}│${RESET}" | sed 's/\\n//g'
+        done
+        unset IFS
+        
+        echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} ${BLUE}ℹ️  Информация о создании резервной копии:${RESET}                     ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Будет создана полная копия текущего окружения MYSHELL.          ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Копия будет сохранена в директории:                            ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   $DATED_BACKUP_DIR ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET} • Старые копии будут архивированы при достижении лимита ($MAX_BACKUPS).${CYAN}│${RESET}"
+        ;;
+    esac
+    
+    # Информация о компонентах
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    echo -e "${CYAN}│${RESET} 📋 Затрагиваемые компоненты:                                       ${CYAN}│${RESET}"
+    
+    case $ACTION in
+      "update"|"reinstall"|"install")
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Zsh/Oh-My-Zsh                                                ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Tmux                                                        ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Vim                                                         ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Dotfiles                                                    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Плагины                                                     ${CYAN}│${RESET}"
+        ;;
+      "plugins")
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} zsh-autosuggestions                                         ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} zsh-syntax-highlighting                                     ${CYAN}│${RESET}"
+        echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} PaperColor тема для Vim                                     ${CYAN}│${RESET}"
+        ;;
+      "backup")
+        [[ -d "$BASE_DIR/ohmyzsh" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Zsh/Oh-My-Zsh                                                ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Zsh/Oh-My-Zsh (отсутствует)                                  ${CYAN}│${RESET}"
+        [[ -d "$BASE_DIR/tmux" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Tmux                                                        ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Tmux (отсутствует)                                        ${CYAN}│${RESET}"
+        [[ -d "$BASE_DIR/vim" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Vim                                                         ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Vim (отсутствует)                                         ${CYAN}│${RESET}"
+        [[ -d "$BASE_DIR/dotfiles" ]] && echo -e "${CYAN}│${RESET}   ${GREEN}✓${RESET} Dotfiles                                                    ${CYAN}│${RESET}" || echo -e "${CYAN}│${RESET}   ${RED}✗${RESET} Dotfiles (отсутствуют)                                    ${CYAN}│${RESET}"
+        ;;
+    esac
+    
+    # Нижняя часть рамки и подтверждение
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────┤${RESET}"
+    echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET} ${YELLOW}Предупреждение:${RESET} Перед продолжением убедитесь, что все данные,       ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET} которые вам важны, сохранены. В случае проблем вы всегда можете     ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET} восстановить настройки из резервной копии.                          ${CYAN}│${RESET}"
+    echo -e "${CYAN}│${RESET}                                                                    ${CYAN}│${RESET}"
+    echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+    
+    # Запрашиваем подтверждение
+    echo ""
+    echo -en "${GREEN}▶  Вы уверены, что хотите продолжить? (y/n): ${RESET}"
+    read confirm
+    
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+      clear
+      echo -e "\n${GREEN}⏳ Начинаем выполнение...${RESET}\n"
+      break
+    else
+      # Возвращаемся в меню
+      echo -e "\n${YELLOW}⚠️  Действие отменено, возврат в меню...${RESET}"
+      sleep 1
+      continue
+    fi
+  done
 }
 
 #----------------------------------------------------
@@ -460,59 +1783,19 @@ main
 
 # Обработка действия backup - только создание резервной копии
 if [[ "$ACTION" == "backup" ]]; then
-  print_group_header "🗂️ Создание резервной копии настроек"
-  
   # Проверка наличия директории .myshell
   if [[ ! -d "$BASE_DIR" ]]; then
     echo -e "${RED}❌ Окружение .myshell не найдено. Нечего сохранять.${RESET}"
     exit 1
   fi
   
-  # Архивируем предыдущие бэкапы
-  archive_previous_backups
-  
-  # Создаем директорию для резервных копий
-  if ! mkdir -p "$BACKUP_DIR"; then
-    if sudo mkdir -p "$BACKUP_DIR"; then
-      print_operation "Создание директории для резервных копий" "успешно" "GREEN"
-    else
-      print_operation "Создание директории для резервных копий" "ошибка" "RED"
-      exit 1
-    fi
-  else
-    print_operation "Создание директории для резервных копий" "успешно" "GREEN"
+  # Загружаем пользовательские настройки, если они есть
+  if [[ -f "$BASE_DIR/backup_config" ]]; then
+    source "$BASE_DIR/backup_config"
   fi
   
-  # Создаем директорию для текущего бэкапа
-  if ! mkdir -p "$DATED_BACKUP_DIR"; then
-    if sudo mkdir -p "$DATED_BACKUP_DIR"; then
-      print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
-    else
-      print_operation "Создание директории для текущего бэкапа" "ошибка" "RED"
-      exit 1
-    fi
-  else
-    print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
-  fi
-  
-  # Копируем текущее окружение .myshell (кроме папки backup)
-  if ! rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
-    if sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"; then
-      print_operation "Копирование текущего окружения" "успешно" "GREEN"
-    else
-      print_operation "Копирование текущего окружения" "ошибка" "RED"
-      exit 1
-    fi
-  else
-    print_operation "Копирование текущего окружения" "успешно" "GREEN"
-  fi
-  
-  # Создаем README в директории бэкапа
-  echo "# Backup of MYSHELL environment" > "$DATED_BACKUP_DIR/README.md"
-  echo "Created: $(date)" >> "$DATED_BACKUP_DIR/README.md"
-  echo "Original directory: $BASE_DIR" >> "$DATED_BACKUP_DIR/README.md"
-  
-  echo -e "${GREEN}🎉 Резервная копия успешно создана!${RESET}"
+  # Вызываем меню управления резервными копиями
+  backup_menu
   exit 0
 fi
 
@@ -723,7 +2006,7 @@ else
           fi
         elif [[ -f "$src" ]]; then
           # Если это обычный файл
-          if [[ -s "$src" ]]; then  # Проверка на непустой файл
+if [[ -s "$src" ]]; then  # Проверка на непустой файл
             if ! cp -p "$src" "$dst"; then
               if sudo cp -p "$src" "$dst"; then
                 print_operation "Копирование файла: $src" "успешно" "GREEN"
@@ -917,32 +2200,31 @@ if [[ "$ACTION" != "update" ]]; then
     fi
   }
   
-# Удаление старых конфигов и симлинков
-echo -e "  ${BLUE}└─→ Удаляем старые конфигурационные файлы:${RESET}"
+  # Удаление старых конфигов и симлинков
+  echo -e "  ${BLUE}└─→ Удаляем старые конфигурационные файлы:${RESET}"
 
-# Подсчитываем, сколько всего файлов надо удалить
-declare -a files_to_remove=()
-for item in $TRASH; do
-  for target in $HOME/$item; do
-    if [[ -e "$target" || -L "$target" ]]; then
-      files_to_remove+=("$(basename "$target")")
-    fi
+  # Подсчитываем, сколько всего файлов надо удалить
+  declare -a files_to_remove=()
+  for item in $TRASH; do
+    for target in $HOME/$item; do
+      if [[ -e "$target" || -L "$target" ]]; then
+        files_to_remove+=("$(basename "$target")")
+      fi
+    done
   done
-done
 
-# Если нет файлов для удаления
-if [ ${#files_to_remove[@]} -eq 0 ]; then
-  print_operation "Старые конфигурационные файлы" "не найдены" "GREEN"
-else
-  # Удаляем каждый файл с подробным логированием
-  for base_item in "${files_to_remove[@]}"; do
-    clean_item "$base_item"
-  done
-  
-  # В конце выводим итоговое сообщение
-  print_operation "Всего удалено файлов" "${#files_to_remove[@]}" "GREEN"
-fi
-
+  # Если нет файлов для удаления
+  if [ ${#files_to_remove[@]} -eq 0 ]; then
+    print_operation "Старые конфигурационные файлы" "не найдены" "GREEN"
+  else
+    # Удаляем каждый файл с подробным логированием
+    for base_item in "${files_to_remove[@]}"; do
+      clean_item "$base_item"
+    done
+    
+    # В конце выводим итоговое сообщение
+    print_operation "Всего удалено файлов" "${#files_to_remove[@]}" "GREEN"
+  fi
 fi
 
 #----------------------------------------------------
@@ -1208,14 +2490,6 @@ fi
 # 🏁 Финальное сообщение
 #----------------------------------------------------
 
-# Простая функция для центрирования текста
-center_text() {
-  local text="$1"
-  local width=80
-  local padding=$(( (width - ${#text}) / 2 ))
-  printf "%${padding}s%s%${padding}s\n" "" "$text" ""
-}
-
 # Красивое завершение
 echo ""
 echo -e "${GREEN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
@@ -1242,3 +2516,7 @@ if [[ "$switch_to_zsh" =~ ^[Yy]$ ]]; then
 else
   echo -e "${GREEN}👋 До свидания!${RESET}"
 fi
+
+            
+
+      
