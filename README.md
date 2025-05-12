@@ -24,13 +24,14 @@ MYSHELL — это интерактивный Bash-скрипт, разрабо�
 
 Быстрая установка одной командой (выполняйте из домашней директории пользователя):
 ```bash
-cd ~ && curl -L https://raw.githubusercontent.com/alexbic/init-shell/main/setup.sh -o ~/setup.sh && chmod +x ~/setup.sh && ~/setup.sh
+cd ~ && rm -rf ~/init-shell 2>/dev/null && mkdir -p ~/init-shell && curl -L https://raw.githubusercontent.com/alexbic/init-shell/main/setup.sh -o ~/init-shell/setup.sh && chmod +x ~/init-shell/setup.sh && ~/init-shell/setup.sh
 ```
 
 Или клонируйте репозиторий для расширенного использования:
 ```bash
+cd ~ 
+rm -rf ~/init-shell 2>/dev/null
 git clone https://github.com/alexbic/init-shell.git ~/init-shell
-cd ~
 chmod +x ~/init-shell/setup.sh
 ./init-shell/setup.sh
 ```
