@@ -245,12 +245,13 @@ show_menu() {
     #read -p "    Продолжить? (y/n): " confirm
 
 
-# Минималистичное форматирование подтверждения
-echo -e "\n${BLUE}╭── ${CYAN}Подтверждение${RESET}"
-echo -e "${BLUE}│${RESET}"
-echo -e "${BLUE}│  ${CYAN}$(get_action_description)${RESET}"
-echo -e "${BLUE}╰──${RESET}"
-read -p "${GREEN}▶ Продолжить? (y/n): ${RESET}" confirm
+# Простое и надежное форматирование
+echo -e "\n${BLUE}+--- ${CYAN}Подтверждение${RESET}"
+echo -e "${BLUE}|${RESET}"
+echo -e "${BLUE}|   ${CYAN}$(get_action_description)${RESET}"
+echo -e "${BLUE}+---${RESET}"
+echo -en "${GREEN}> Продолжить? (y/n): ${RESET}"
+read confirm
     
     
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
