@@ -171,9 +171,11 @@ show_logo() {
   echo -e " / /|_/ /|   /\\__ \\/ /_/ / __/ / /   / /"
   echo -e "${RU_RED}/ /  / //   /___/ / __  / /___/ /___/ /___"
   echo -e "/_/  /_//_/|_/____/_/ /_/_____/_____/_____/${RESET}"
-  
-  
-  echo -e "${BLUE}💡 Development Environment for ${CYAN}AlexBic.net${RESET} Projects"
+  echo -e ""
+  echo -e "${BLUE}💡 Терминальное окружение для ${CYAN}Linux${RESET} (Debian)"
+
+  echo -e "${WHITE}Zsh + Oh-My-Zsh${RESET} ${RU_BLUE}Tmux${RESET} ${RU_RED}Vim${RESET} " 
+
   echo -e "${BLUE}📦 Version: ${YELLOW}$SCRIPT_VERSION${RESET}"
   echo -e "${BLUE}🔗 https://github.com/alexbic/init-shell${RESET}\n"
 }
@@ -879,11 +881,12 @@ configure_backup() {
   
   # Верхняя часть рамки
   echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
-  echo -e "${CYAN} ${YELLOW}НАСТРОЙКА РЕЗЕРВНОГО КОПИРОВАНИЯ${RESET}"
-  echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
-  
+  echo -e "${CYAN}│${RESET}               ${YELLOW}🔧 НАСТРОЙКА РЕЗЕРВНОГО КОПИРОВАНИЯ${RESET}               ${CYAN}│${RESET}"
+  echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+  echo -e ""
+
   # Текущие настройки без боковых рамок
-  echo -e "${BLUE}🔧 Текущие настройки:${RESET}"
+ # echo -e "${BLUE}🔧 Текущие настройки:${RESET}"
   echo ""
   echo -e "  • Максимальное количество хранимых копий: ${YELLOW}$MAX_BACKUPS${RESET}"
   echo -e "  • Директория резервных копий: ${YELLOW}$BACKUP_DIR${RESET}"
@@ -893,7 +896,7 @@ configure_backup() {
   echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
   
   # Доступные настройки без боковых рамок
-  echo -e "${BLUE}📋 Доступные параметры для настройки:${RESET}"
+  # echo -e "${BLUE}📋 Доступные параметры для настройки:${RESET}"
   echo ""
   echo -e "  ${CYAN}1)${RESET} Изменить максимальное количество хранимых копий"
   echo -e "  ${CYAN}2)${RESET} Изменить директорию для резервных копий"
@@ -1281,11 +1284,11 @@ backup_menu() {
     
     # Верхняя часть рамки - только верхняя линия
     echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
-    echo -e "${CYAN} ${YELLOW}УПРАВЛЕНИЕ РЕЗЕРВНЫМИ КОПИЯМИ${RESET}"
-    echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
-    
+    echo -e "${CYAN}│${RESET}               ${YELLOW}УПРАВЛЕНИЕ РЕЗЕРВНЫМИ КОПИЯМИ${RESET}               ${CYAN}│${RESET}"
+    echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+    echo -e ""
     # Информация о резервных копиях без боковых рамок
-    echo -e "${BLUE}📊 Информация о резервных копиях:${RESET}"
+   # echo -e "${BLUE}📊 Информация о резервных копиях:${RESET}"
     
     # Проверка наличия директории для бэкапов
     if [[ ! -d "$BACKUP_DIR" ]]; then
@@ -1300,7 +1303,7 @@ backup_menu() {
         local initial_date=$(stat -c %y "$BACKUP_DIR/${INITIAL_BACKUP_NAME}.tar.gz" | cut -d' ' -f1)
         echo -e "${GREEN}✓ Первоначальная копия${RESET} - $initial_date (архив)"
       else
-        echo -e "${YELLOW}⚠️  Первоначальная копия отсутствует${RESET}"
+        #echo -e "${YELLOW}⚠️  Первоначальная копия отсутствует${RESET}"
       fi
       
       # Получаем список обычных резервных копий
@@ -1560,10 +1563,13 @@ show_menu() {
     
     # Верхняя часть рамки
 echo -e "${CYAN}┌────────────────────────────────────────────────────────────────────┐${RESET}"
-echo -e "${CYAN} ${YELLOW}$action_title${RESET}"
-echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+echo -e "${CYAN}│${RESET}               ${YELLOW}$action_title${RESET}               ${CYAN}│${RESET}"
+echo -e "${CYAN}└────────────────────────────────────────────────────────────────────┘${RESET}"
+echo -e ""
 echo -e "${YELLOW}$(center_text "$action_desc")${RESET}"
+echo -e ""
 echo -e "${CYAN}────────────────────────────────────────────────────────────────────${RESET}"
+echo -e ""
 
 
     # В зависимости от действия, добавляем разные блоки информации в рамку
