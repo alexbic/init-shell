@@ -458,7 +458,7 @@ manage_backups() {
             else
               print_warning "Ссылка $base_name указывает на несуществующий объект" "пропущено"
             fi
-          } else if [[ -d "$target" ]]; then
+           elif [[ -d "$target" ]]; then
             # Для директорий используем rsync
             if ! rsync -a "$target/" "$BACKUP_DIR/$INITIAL_BACKUP_NAME/$(basename "$target")/"; then
               if sudo rsync -a "$target/" "$BACKUP_DIR/$INITIAL_BACKUP_NAME/$(basename "$target")/"; then
