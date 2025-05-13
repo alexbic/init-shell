@@ -2627,45 +2627,63 @@ else
         print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
       fi
 
-# Функция для безопасного копирования файла, разыменовывающая символические ссылки
+# Функция для безопасного копирования файла с разыменованием символических ссылок
 copy_with_deref() {
   local src="$1"
   local dst="$2"
   
-  if [[ ! -e "$src" ]]; then
+  # Проверка существования исходного файла
+  if [[ ! -e "$src" && ! -L "$src" ]]; then
     print_warning "Исходный файл не существует" "$src"
     return 1
   fi
   
+  # Обработка символических ссылок
   if [[ -L "$src" ]]; then
-    # Если это символическая ссылка, проверяем, что она не битая
     local target=$(readlink -f "$src")
+    # Проверка доступности цели ссылки
     if [[ -e "$target" ]]; then
-      # Проверяем, не пустой ли файл
-      if [[ -s "$target" || -d "$target" ]]; then
-        if ! cp -pL "$src" "$dst"; then
-          if sudo cp -pL "$src" "$dst"; then
-            print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
+      # Копируем содержимое, на которое указывает ссылка
+      if [[ -d "$target" ]]; then
+        # Для директории
+        if ! cp -a "$target" "$dst"; then
+          if sudo cp -a "$target" "$dst"; then
+            print_operation "Копирование директории по ссылке: $src" "успешно" "GREEN"
             return 0
           else
-            print_error "Копирование файла по ссылке: $src -> $target" "ошибка"
+            print_error "Копирование директории по ссылке: $src" "ошибка"
             return 1
           fi
         else
-          print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
+          print_operation "Копирование директории по ссылке: $src" "успешно" "GREEN"
+          return 0
+        fi
+      elif [[ -f "$target" && -s "$target" ]]; then
+        # Для непустых файлов
+        if ! cp -a "$target" "$dst"; then
+          if sudo cp -a "$target" "$dst"; then
+            print_operation "Копирование файла по ссылке: $src" "успешно" "GREEN"
+            return 0
+          else
+            print_error "Копирование файла по ссылке: $src" "ошибка"
+            return 1
+          fi
+        else
+          print_operation "Копирование файла по ссылке: $src" "успешно" "GREEN"
           return 0
         fi
       else
-        print_warning "Пропуск пустого файла по ссылке" "$src -> $target"
+        print_warning "Пропуск пустого файла по ссылке" "$src"
         return 1
       fi
     else
       print_warning "Пропуск битой символической ссылки" "$src"
       return 1
     fi
+  # Обработка обычных файлов
   elif [[ -f "$src" ]]; then
-    # Если это обычный файл
-    if [[ -s "$src" ]]; then  # Проверка на непустой файл
+    # Копируем только непустые файлы
+    if [[ -s "$src" ]]; then
       if ! cp -p "$src" "$dst"; then
         if sudo cp -p "$src" "$dst"; then
           print_operation "Копирование файла: $src" "успешно" "GREEN"
@@ -2682,8 +2700,8 @@ copy_with_deref() {
       print_warning "Пропуск пустого файла" "$src"
       return 1
     fi
+  # Обработка директорий
   elif [[ -d "$src" ]]; then
-    # Если это директория
     if ! cp -a "$src" "$dst"; then
       if sudo cp -a "$src" "$dst"; then
         print_operation "Копирование директории: $src" "успешно" "GREEN"
@@ -2696,6 +2714,7 @@ copy_with_deref() {
       print_operation "Копирование директории: $src" "успешно" "GREEN"
       return 0
     fi
+  # Обработка неизвестных типов файлов
   else
     print_warning "Неизвестный тип файла" "$src"
     return 1
