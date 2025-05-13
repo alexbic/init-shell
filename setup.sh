@@ -2549,7 +2549,7 @@ if [[ -d "$BASE_DIR" ]]; then
     fi
     
     # Проверка доступного места
-    local myshell_size=$(du -sm "$BASE_DIR" 2>/dev/null | cut -f1 || echo "100")
+    myshell_size=$(du -sm "$BASE_DIR" 2>/dev/null | cut -f1 || echo "100")
     if ! check_disk_space "$BACKUP_DIR" $((myshell_size + 200)); then
       print_warning "Недостаточно места для создания резервной копии" "пропущено"
     else
