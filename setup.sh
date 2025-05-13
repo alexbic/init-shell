@@ -546,7 +546,7 @@ EOF
        print_operation "Удаление старой копии $dir_name" "успешно" "GREEN"
         fi
         continue
-      }
+      fi
       
       # Архивируем перед удалением
       if ! tar -czf "$archive_path" -C "$old_dir" .; then
