@@ -2638,88 +2638,121 @@ copy_with_deref() {
     return 1
   fi
   
-  # Обработка разных типов файлов
+  # Обработка символической ссылки
   if [[ -L "$src" ]]; then
-    # Это символическая ссылка
-    local target=$(readlink -f "$src")
-    if [[ ! -e "$target" ]]; then
-      print_warning "Битая символическая ссылка" "$src"
-      return 1
-    fi
-    
-    if [[ -d "$target" ]]; then
-      # Директория, на которую указывает ссылка
-      if ! cp -a "$target/." "$dst/"; then
-        if sudo cp -a "$target/." "$dst/"; then
-          print_operation "Копирование директории по ссылке" "$src" "GREEN"
-          return 0
-        else
-          print_error "Копирование директории по ссылке" "$src"
-          return 1
-        fi
-      else
+    copy_symlink "$src" "$dst"
+    return $?
+  fi
+  
+  # Обработка директории
+  if [[ -d "$src" ]]; then
+    copy_directory "$src" "$dst"
+    return $?
+  fi
+  
+  # Обработка обычного файла
+  if [[ -f "$src" ]]; then
+    copy_file "$src" "$dst"
+    return $?
+  fi
+  
+  # Неизвестный тип файла
+  print_warning "Неизвестный тип файла" "$src"
+  return 1
+}
+
+# Функция для копирования символической ссылки
+copy_symlink() {
+  local src="$1"
+  local dst="$2"
+  local target=$(readlink -f "$src")
+  
+  if [[ ! -e "$target" ]]; then
+    print_warning "Битая символическая ссылка" "$src"
+    return 1
+  fi
+  
+  if [[ -d "$target" ]]; then
+    # Директория, на которую указывает ссылка
+    if ! cp -a "$target/." "$dst/"; then
+      if sudo cp -a "$target/." "$dst/"; then
         print_operation "Копирование директории по ссылке" "$src" "GREEN"
         return 0
-      fi
-    elif [[ -f "$target" ]]; then
-      # Файл, на который указывает ссылка
-      if [[ ! -s "$target" ]]; then
-        print_warning "Пустой файл по ссылке" "$src"
-        return 1
-      fi
-      
-      if ! cp -a "$target" "$dst"; then
-        if sudo cp -a "$target" "$dst"; then
-          print_operation "Копирование файла по ссылке" "$src" "GREEN"
-          return 0
-        else
-          print_error "Копирование файла по ссылке" "$src"
-          return 1
-        fi
       else
-        print_operation "Копирование файла по ссылке" "$src" "GREEN"
-        return 0
-      fi
-    else
-      print_warning "Неизвестный тип файла по ссылке" "$src"
-      return 1
-    fi
-  elif [[ -d "$src" ]]; then
-    # Это директория
-    if ! cp -a "$src/." "$dst/"; then
-      if sudo cp -a "$src/." "$dst/"; then
-        print_operation "Копирование директории" "$src" "GREEN"
-        return 0
-      else
-        print_error "Копирование директории" "$src"
+        print_error "Копирование директории по ссылке" "$src"
         return 1
       fi
     else
-      print_operation "Копирование директории" "$src" "GREEN"
+      print_operation "Копирование директории по ссылке" "$src" "GREEN"
       return 0
     fi
-  elif [[ -f "$src" ]]; then
-    # Это файл
-    if [[ ! -s "$src" ]]; then
-      print_warning "Пустой файл" "$src"
+  fi
+  
+  if [[ -f "$target" ]]; then
+    # Файл, на который указывает ссылка
+    if [[ ! -s "$target" ]]; then
+      print_warning "Пустой файл по ссылке" "$src"
       return 1
     fi
     
-    if ! cp -a "$src" "$dst"; then
-      if sudo cp -a "$src" "$dst"; then
-        print_operation "Копирование файла" "$src" "GREEN"
+    if ! cp -a "$target" "$dst"; then
+      if sudo cp -a "$target" "$dst"; then
+        print_operation "Копирование файла по ссылке" "$src" "GREEN"
         return 0
       else
-        print_error "Копирование файла" "$src"
+        print_error "Копирование файла по ссылке" "$src"
         return 1
       fi
     else
-      print_operation "Копирование файла" "$src" "GREEN"
+      print_operation "Копирование файла по ссылке" "$src" "GREEN"
       return 0
     fi
+  fi
+  
+  print_warning "Неизвестный тип файла по ссылке" "$src"
+  return 1
+}
+
+# Функция для копирования директории
+copy_directory() {
+  local src="$1"
+  local dst="$2"
+  
+  if ! cp -a "$src/." "$dst/"; then
+    if sudo cp -a "$src/." "$dst/"; then
+      print_operation "Копирование директории" "$src" "GREEN"
+      return 0
+    else
+      print_error "Копирование директории" "$src"
+      return 1
+    fi
   else
-    print_warning "Неизвестный тип файла" "$src"
+    print_operation "Копирование директории" "$src" "GREEN"
+    return 0
+  fi
+}
+
+# Функция для копирования файла
+copy_file() {
+  local src="$1"
+  local dst="$2"
+  
+  if [[ ! -s "$src" ]]; then
+    print_warning "Пустой файл" "$src"
     return 1
+  fi
+  
+  if ! cp -a "$src" "$dst"; then
+    if sudo cp -a "$src" "$dst"; then
+      print_operation "Копирование файла" "$src" "GREEN"
+      return 0
+    else
+      print_error "Копирование файла" "$src"
+      return 1
+    fi
+  else
+    print_operation "Копирование файла" "$src" "GREEN"
+    return 0
   fi
 }
 
