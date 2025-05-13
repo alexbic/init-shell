@@ -2627,80 +2627,80 @@ else
         print_operation "Создание директории для текущего бэкапа" "успешно" "GREEN"
       fi
 
-      # Функция для безопасного копирования файла, разыменовывающая символические ссылки
-      copy_with_deref() {
-        local src="$1"
-        local dst="$2"
-        
-        if [[ ! -e "$src" ]]; then
-          print_warning "Исходный файл не существует" "$src"
-          return 1
-        fi
-        
-        if [[ -L "$src" ]]; then
-          # Если это символическая ссылка, проверяем, что она не битая
-          local target=$(readlink -f "$src")
-          if [[ -e "$target" ]]; then
-            # Проверяем, не пустой ли файл
-            if [[ -s "$target" || -d "$target" ]]; then
-              if ! cp -pL "$src" "$dst"; then
-                if sudo cp -pL "$src" "$dst"; then
-                  print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
-                  return 0
-                else
-                  print_error "Копирование файла по ссылке: $src -> $target" "ошибка"
-                  return 1
-                fi
-              else
-                print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
-                return 0
-              fi
-            else
-              print_warning "Пропуск пустого файла по ссылке" "$src -> $target"
-              return 1
-            fi
-          else
-            print_warning "Пропуск битой символической ссылки" "$src"
-            return 1
-          fi
-        elif [[ -f "$src" ]]; then
-          # Если это обычный файл
-          if [[ -s "$src" ]]; then  # Проверка на непустой файл
-            if ! cp -p "$src" "$dst"; then
-              if sudo cp -p "$src" "$dst"; then
-                print_operation "Копирование файла: $src" "успешно" "GREEN"
-                return 0
-              else
-                print_error "Копирование файла: $src" "ошибка"
-                return 1
-              fi
-            else
-              print_operation "Копирование файла: $src" "успешно" "GREEN"
-              return 0
-            fi
-          else
-            print_warning "Пропуск пустого файла" "$src"
-            return 1
-          fi
-        elif [[ -d "$src" ]]; then
-          # Если это директория
-          if ! cp -a "$src" "$dst"; then
-            if sudo cp -a "$src" "$dst"; then
-              print_operation "Копирование директории: $src" "успешно" "GREEN"
-              return 0
-            else
-              print_error "Копирование директории: $src" "ошибка"
-              return 1
-            fi
-          else
-            print_operation "Копирование директории: $src" "успешно" "GREEN"
+# Функция для безопасного копирования файла, разыменовывающая символические ссылки
+copy_with_deref() {
+  local src="$1"
+  local dst="$2"
+  
+  if [[ ! -e "$src" ]]; then
+    print_warning "Исходный файл не существует" "$src"
+    return 1
+  fi
+  
+  if [[ -L "$src" ]]; then
+    # Если это символическая ссылка, проверяем, что она не битая
+    local target=$(readlink -f "$src")
+    if [[ -e "$target" ]]; then
+      # Проверяем, не пустой ли файл
+      if [[ -s "$target" || -d "$target" ]]; then
+        if ! cp -pL "$src" "$dst"; then
+          if sudo cp -pL "$src" "$dst"; then
+            print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
             return 0
+          else
+            print_error "Копирование файла по ссылке: $src -> $target" "ошибка"
+            return 1
           fi
         else
-          print_warning "Неизвестный тип файла" "$src"
+          print_operation "Копирование файла по ссылке: $src -> $target" "успешно" "GREEN"
+          return 0
+        fi
+      else
+        print_warning "Пропуск пустого файла по ссылке" "$src -> $target"
+        return 1
+      fi
+    else
+      print_warning "Пропуск битой символической ссылки" "$src"
+      return 1
+    fi
+  elif [[ -f "$src" ]]; then
+    # Если это обычный файл
+    if [[ -s "$src" ]]; then  # Проверка на непустой файл
+      if ! cp -p "$src" "$dst"; then
+        if sudo cp -p "$src" "$dst"; then
+          print_operation "Копирование файла: $src" "успешно" "GREEN"
+          return 0
+        else
+          print_error "Копирование файла: $src" "ошибка"
           return 1
         fi
-      }
+      else
+        print_operation "Копирование файла: $src" "успешно" "GREEN"
+        return 0
+      fi
+    else
+      print_warning "Пропуск пустого файла" "$src"
+      return 1
+    fi
+  elif [[ -d "$src" ]]; then
+    # Если это директория
+    if ! cp -a "$src" "$dst"; then
+      if sudo cp -a "$src" "$dst"; then
+        print_operation "Копирование директории: $src" "успешно" "GREEN"
+        return 0
+      else
+        print_error "Копирование директории: $src" "ошибка"
+        return 1
+      fi
+    else
+      print_operation "Копирование директории: $src" "успешно" "GREEN"
+      return 0
+    fi
+  else
+    print_warning "Неизвестный тип файла" "$src"
+    return 1
+  fi
+}
 
       # Копирование конфигурационных файлов и директорий
       if [[ "$EXISTING_CONFIGS" == *"ZSH"* ]]; then
