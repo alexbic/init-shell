@@ -30,7 +30,7 @@ VIM_DIR="$BASE_DIR/vim"
 VIM_COLORS_DIR="$VIM_DIR/colors"
 VIM_PLUGINS_DIR="$VIM_DIR/plugins"
 
-# 🧩 Пакеты для установки
+# 🧩 Пакеты для установки - будут уточнены в зависимости от системы
 PACKAGES="git curl zsh vim"
 
 # 🔗 Git-репозитории
@@ -38,6 +38,70 @@ GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
 GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
 GIT_OMZ_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+
+#----------------------------------------------------
+# 🧠 Определение операционной системы
+#----------------------------------------------------
+
+# Определяем операционную систему
+OS_TYPE="unknown"
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    OS_TYPE="linux"
+    # Дополнительно определяем дистрибутив Linux
+    if [[ -f /etc/debian_version ]]; then
+        DISTRO="debian"
+    elif [[ -f /etc/redhat-release ]]; then
+        DISTRO="redhat"
+    else
+        DISTRO="other"
+    fi
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    OS_TYPE="macos"
+else
+    echo -e "${RED}❌ Неподдерживаемая операционная система: $OSTYPE${RESET}"
+    exit 1
+fi
+
+echo -e "${BLUE}🖥️ Обнаружена операционная система: ${GREEN}$OS_TYPE${RESET}"
+if [[ "$OS_TYPE" == "linux" ]]; then
+    echo -e "${BLUE}🐧 Дистрибутив Linux: ${GREEN}$DISTRO${RESET}"
+fi
+
+# Определяем пакетный менеджер в зависимости от системы
+PACKAGE_MANAGER=""
+INSTALL_CMD=""
+
+if [[ "$OS_TYPE" == "linux" ]]; then
+    if [[ "$DISTRO" == "debian" ]]; then
+        PACKAGE_MANAGER="apt"
+        INSTALL_CMD="sudo apt update && sudo apt install -y"
+    elif [[ "$DISTRO" == "redhat" ]]; then
+        PACKAGE_MANAGER="dnf"
+        INSTALL_CMD="sudo dnf install -y"
+    else
+        echo -e "${YELLOW}⚠️ Не удалось определить пакетный менеджер. Попробуйте установить пакеты вручную.${RESET}"
+    fi
+elif [[ "$OS_TYPE" == "macos" ]]; then
+    # Проверяем наличие Homebrew
+    if command -v brew &>/dev/null; then
+        PACKAGE_MANAGER="brew"
+        INSTALL_CMD="brew install"
+    else
+        echo -e "${YELLOW}⚠️ Homebrew не установлен. Выполняем установку...${RESET}"
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        
+        # Проверяем результат установки Homebrew
+        if command -v brew &>/dev/null; then
+            PACKAGE_MANAGER="brew"
+            INSTALL_CMD="brew install"
+            echo -e "${GREEN}✅ Homebrew успешно установлен${RESET}"
+        else
+            echo -e "${RED}❌ Не удалось установить Homebrew. Пожалуйста, установите его вручную:${RESET}"
+            echo -e "   /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+            exit 1
+        fi
+    fi
+fi
 
 #----------------------------------------------------
 # 🛡️ Предварительные проверки
@@ -72,14 +136,16 @@ if [[ "$CURRENT_DIR" != "$HOME_DIR" ]]; then
   exit 1
 fi
 
-# 🧪 Проверка доступа sudo
-echo -e "${BLUE}🔐 Проверка прав sudo...${RESET}"
-if ! sudo -n true 2>/dev/null; then
-  echo -e "${YELLOW}⚠️ Для продолжения требуются права sudo.${RESET}"
-  sudo -v || {
-    echo -e "${RED}❌ Не удалось получить права sudo. Проверьте, есть ли у вас такие права.${RESET}"
-    exit 1
-  }
+# 🧪 Проверка доступа sudo (только для Linux)
+if [[ "$OS_TYPE" == "linux" ]]; then
+  echo -e "${BLUE}🔐 Проверка прав sudo...${RESET}"
+  if ! sudo -n true 2>/dev/null; then
+    echo -e "${YELLOW}⚠️ Для продолжения требуются права sudo.${RESET}"
+    sudo -v || {
+      echo -e "${RED}❌ Не удалось получить права sudo. Проверьте, есть ли у вас такие права.${RESET}"
+      exit 1
+    }
+  fi
 fi
 
 #----------------------------------------------------
@@ -88,51 +154,59 @@ fi
 
 echo -e "${BLUE}📦 Проверка и установка необходимых пакетов...${RESET}"
 
+# Настраиваем список пакетов в зависимости от операционной системы
+if [[ "$OS_TYPE" == "macos" ]]; then
+    # На macOS некоторые утилиты могут быть предустановлены или иметь другие названия
+    PACKAGES="git curl zsh vim tmux"
+fi
+
+# Функция для проверки наличия пакета
+check_package() {
+    local pkg="$1"
+    
+    if [[ "$OS_TYPE" == "linux" ]]; then
+        if [[ "$DISTRO" == "debian" ]]; then
+            dpkg -s "$pkg" &>/dev/null
+        elif [[ "$DISTRO" == "redhat" ]]; then
+            rpm -q "$pkg" &>/dev/null
+        else
+            command -v "$pkg" &>/dev/null
+        fi
+    elif [[ "$OS_TYPE" == "macos" ]]; then
+        # На macOS проверяем сначала через brew, затем по наличию команды
+        brew list "$pkg" &>/dev/null || command -v "$pkg" &>/dev/null
+    fi
+}
+
 NEEDED_PACKAGES=()
-OS_TYPE=$(uname)
+for pkg in $PACKAGES; do
+  if ! check_package "$pkg"; then
+    NEEDED_PACKAGES+=("$pkg")
+  fi
+done
 
-install_packages_linux() {
-  for pkg in $PACKAGES; do
-    if ! dpkg -s "$pkg" &>/dev/null; then
-      NEEDED_PACKAGES+=("$pkg")
+if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
+  echo "📦 Устанавливаем: ${NEEDED_PACKAGES[*]}"
+  
+  if [[ -n "$INSTALL_CMD" ]]; then
+    # Используем соответствующую команду для установки
+    if [[ "$OS_TYPE" == "linux" ]]; then
+      if [[ "$DISTRO" == "debian" ]]; then
+        sudo apt update
+        sudo apt install -y "${NEEDED_PACKAGES[@]}"
+      elif [[ "$DISTRO" == "redhat" ]]; then
+        sudo dnf install -y "${NEEDED_PACKAGES[@]}"
+      fi
+    elif [[ "$OS_TYPE" == "macos" ]]; then
+      brew install "${NEEDED_PACKAGES[@]}"
     fi
-  done
-
-  if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
-    echo "📦 Устанавливаем (APT): ${NEEDED_PACKAGES[*]}"
-    sudo apt update
-    sudo apt install -y "${NEEDED_PACKAGES[@]}"
   else
-    echo "✅ Все необходимые пакеты уже установлены (APT)."
+    echo -e "${RED}❌ Не удалось определить команду для установки пакетов.${RESET}"
+    exit 1
   fi
-}
-
-install_packages_macos() {
-  # Проверяем установлен ли brew
-  if ! command -v brew &>/dev/null; then
-    echo "🛠 Homebrew не найден. Устанавливаем..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  fi
-
-  for pkg in $PACKAGES; do
-    if ! brew list "$pkg" &>/dev/null; then
-      NEEDED_PACKAGES+=("$pkg")
-    fi
-  done
-
-  if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
-    echo "📦 Устанавливаем (brew): ${NEEDED_PACKAGES[*]}"
-    brew install "${NEEDED_PACKAGES[@]}"
-  else
-    echo "✅ Все необходимые пакеты уже установлены (brew)."
-  fi
-}
-
-case "$OS_TYPE" in
-  Linux*) install_packages_linux ;;
-  Darwin*) install_packages_macos ;;
-  *) echo "❌ Неизвестная операционная система: $OS_TYPE" ;;
-esac
+else
+  echo "✅ Все необходимые пакеты уже установлены."
+fi
 
 #----------------------------------------------------
 # 🔍 Проверка и обработка существующих конфигураций
@@ -171,11 +245,19 @@ if [[ -d "$BASE_DIR" ]]; then
       echo -e "${BLUE}📦 Архивируем папку $backup_dir в $archive_path...${RESET}"
       tar -czf "$archive_path" -C "$backup_dir" . || {
         echo -e "${YELLOW}⚠️ Ошибка при архивации. Пробуем с sudo...${RESET}"
-        sudo tar -czf "$archive_path" -C "$backup_dir" .
+        if [[ "$OS_TYPE" == "linux" ]]; then
+          sudo tar -czf "$archive_path" -C "$backup_dir" .
+        else
+          tar -czf "$archive_path" -C "$backup_dir" .
+        fi
       }
       
       # Удаляем папку после архивации
-      rm -rf "$backup_dir" || sudo rm -rf "$backup_dir"
+      if [[ "$OS_TYPE" == "linux" ]]; then
+        rm -rf "$backup_dir" || sudo rm -rf "$backup_dir"
+      else
+        rm -rf "$backup_dir"
+      fi
       
       echo -e "${GREEN}✅ Папка с бэкапом архивирована в $archive_path${RESET}"
       
@@ -191,21 +273,30 @@ if [[ -d "$BASE_DIR" ]]; then
     echo -e "${BLUE}🗂️ Создание папки для текущего бэкапа: $DATED_BACKUP_DIR${RESET}"
     mkdir -p "$DATED_BACKUP_DIR" || {
       echo -e "${YELLOW}⚠️ Не удалось создать директорию для текущего бэкапа. Пробуем с sudo...${RESET}"
-      sudo mkdir -p "$DATED_BACKUP_DIR"
+      if [[ "$OS_TYPE" == "linux" ]]; then
+        sudo mkdir -p "$DATED_BACKUP_DIR"
+      else
+        mkdir -p "$DATED_BACKUP_DIR"
+      fi
     }
     
     # Копируем текущее окружение .myshell (кроме папки backup)
     echo -e "${BLUE}🔄 Копирование текущего окружения в $DATED_BACKUP_DIR...${RESET}"
     rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/" || {
       echo -e "${YELLOW}⚠️ Ошибка при копировании. Пробуем с sudo...${RESET}"
-      sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"
+      if [[ "$OS_TYPE" == "linux" ]]; then
+        sudo rsync -a --exclude 'backup/' "$BASE_DIR/" "$DATED_BACKUP_DIR/"
+      else
+        # На macOS используем cp если rsync не работает
+        cp -R "$BASE_DIR"/* "$DATED_BACKUP_DIR/" 2>/dev/null || echo "Ошибка при копировании, но продолжаем..."
+      fi
     }
     echo -e "${GREEN}✅ Текущее окружение .myshell сохранено в $DATED_BACKUP_DIR${RESET}"
   else
     echo -e "${YELLOW}⚠️ Бэкап текущего окружения .myshell не был создан по выбору пользователя.${RESET}"
   fi
 else
-  # Если .myshell не найден, проверяем наличие отдельных конфигурационных файлов
+  # Проверяем наличие отдельных конфигурационных файлов
   echo -e "${BLUE}🔍 Окружение .myshell не найдено, проверяем наличие отдельных конфигураций...${RESET}"
   
   EXISTING_CONFIGS=""
@@ -220,23 +311,23 @@ else
     if [[ "$SAVE_CONFIG" =~ ^[Yy]$ ]]; then
       echo -e "${BLUE}🗂️ Создание директорий для бэкапа...${RESET}"
       
-      # Сначала создаем базовую директорию .myshell
-      mkdir -p "$BASE_DIR" || {
-        echo -e "${YELLOW}⚠️ Не удалось создать базовую директорию. Пробуем с sudo...${RESET}"
-        sudo mkdir -p "$BASE_DIR"
+      # Функция для создания директории с обработкой ошибок
+      create_dir_safe() {
+        local dir="$1"
+        mkdir -p "$dir" || {
+          echo -e "${YELLOW}⚠️ Не удалось создать директорию $dir. Пробуем с sudo...${RESET}"
+          if [[ "$OS_TYPE" == "linux" ]]; then
+            sudo mkdir -p "$dir"
+          else
+            mkdir -p "$dir"
+          fi
+        }
       }
       
-      # Затем создаем директорию для резервных копий
-      mkdir -p "$BACKUP_DIR" || {
-        echo -e "${YELLOW}⚠️ Не удалось создать директорию резервных копий. Пробуем с sudo...${RESET}"
-        sudo mkdir -p "$BACKUP_DIR"
-      }
-      
-      # И наконец, директорию для текущего бэкапа
-      mkdir -p "$DATED_BACKUP_DIR" || {
-        echo -e "${YELLOW}⚠️ Не удалось создать директорию для текущего бэкапа. Пробуем с sudo...${RESET}"
-        sudo mkdir -p "$DATED_BACKUP_DIR"
-      }
+      # Создаем необходимые директории
+      create_dir_safe "$BASE_DIR"
+      create_dir_safe "$BACKUP_DIR"
+      create_dir_safe "$DATED_BACKUP_DIR"
       
       # Функция для безопасного копирования файла, разыменовывающая символические ссылки
       copy_with_deref() {
@@ -245,10 +336,14 @@ else
         
         if [[ -L "$src" ]]; then
           # Если это символическая ссылка, проверяем, что она не битая
-          local target=$(readlink -f "$src")
+          local target=$(readlink -f "$src" 2>/dev/null || readlink "$src")
           if [[ -e "$target" ]]; then
             echo "🔄 Копирование файла по ссылке: $src -> $target"
-            cp -pL "$src" "$dst" || sudo cp -pL "$src" "$dst"
+            if [[ "$OS_TYPE" == "linux" ]]; then
+              cp -pL "$src" "$dst" || sudo cp -pL "$src" "$dst"
+            else
+              cp -RL "$src" "$dst"
+            fi
           else
             echo -e "${YELLOW}⚠️ Пропускаем битую символическую ссылку: $src${RESET}"
           fi
@@ -256,24 +351,29 @@ else
           # Если это обычный файл
           if [[ -s "$src" ]]; then  # Проверка на непустой файл
             echo "🔄 Копирование файла: $src"
-            cp -p "$src" "$dst" || sudo cp -p "$src" "$dst"
+            if [[ "$OS_TYPE" == "linux" ]]; then
+              cp -p "$src" "$dst" || sudo cp -p "$src" "$dst"
+            else
+              cp -p "$src" "$dst"
+            fi
           else
             echo -e "${YELLOW}⚠️ Пропускаем пустой файл: $src${RESET}"
           fi
         elif [[ -d "$src" ]]; then
           # Если это директория
           echo "🔄 Копирование директории: $src"
-          cp -a "$src" "$dst" || {
-            echo -e "${YELLOW}⚠️ Ошибка при копировании. Пробуем с sudo...${RESET}"
-            sudo cp -a "$src" "$dst"
-          }
+          if [[ "$OS_TYPE" == "linux" ]]; then
+            cp -a "$src" "$dst" || sudo cp -a "$src" "$dst"
+          else
+            cp -R "$src" "$dst"
+          fi
         fi
       }
-  
+      
       # Копирование конфигурационных файлов и директорий
       if [[ "$EXISTING_CONFIGS" == *"ZSH"* ]]; then
         echo "🔄 Сохранение конфигурации ZSH..."
-        mkdir -p "$DATED_BACKUP_DIR/zsh"
+        create_dir_safe "$DATED_BACKUP_DIR/zsh"
         
         if [[ -e "$HOME/.zshrc" ]]; then
           copy_with_deref "$HOME/.zshrc" "$DATED_BACKUP_DIR/zsh/"
@@ -282,26 +382,29 @@ else
         if [[ -d "$HOME/.oh-my-zsh" ]]; then
           if [[ -L "$HOME/.oh-my-zsh" ]]; then
             echo "🔄 Обнаружена символическая ссылка .oh-my-zsh, копируем настоящую директорию"
-            local omz_target=$(readlink -f "$HOME/.oh-my-zsh")
+            local omz_target=$(readlink -f "$HOME/.oh-my-zsh" 2>/dev/null || readlink "$HOME/.oh-my-zsh")
             if [[ -d "$omz_target" ]]; then
-              cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh" || {
-                sudo cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"
-              }
+              if [[ "$OS_TYPE" == "linux" ]]; then
+                cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh" || sudo cp -a "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"
+              else
+                cp -R "$omz_target" "$DATED_BACKUP_DIR/zsh/oh-my-zsh"
+              fi
             else
               echo -e "${YELLOW}⚠️ Ссылка .oh-my-zsh указывает на несуществующую директорию${RESET}"
             fi
           else
-            cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/" || {
-              echo -e "${YELLOW}⚠️ Ошибка при копировании .oh-my-zsh. Пробуем с sudo...${RESET}"
-              sudo cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"
-            }
+            if [[ "$OS_TYPE" == "linux" ]]; then
+              cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/" || sudo cp -a "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"
+            else
+              cp -R "$HOME/.oh-my-zsh" "$DATED_BACKUP_DIR/zsh/"
+            fi
           fi
         fi
       fi
   
       if [[ "$EXISTING_CONFIGS" == *"TMUX"* ]]; then
         echo "🔄 Сохранение конфигурации TMUX..."
-        mkdir -p "$DATED_BACKUP_DIR/tmux"
+        create_dir_safe "$DATED_BACKUP_DIR/tmux"
         
         [[ -e "$HOME/.tmux.conf" ]] && copy_with_deref "$HOME/.tmux.conf" "$DATED_BACKUP_DIR/tmux/"
         [[ -e "$HOME/.tmux.conf.local" ]] && copy_with_deref "$HOME/.tmux.conf.local" "$DATED_BACKUP_DIR/tmux/"
@@ -309,26 +412,29 @@ else
   
       if [[ "$EXISTING_CONFIGS" == *"VIM"* ]]; then
         echo "🔄 Сохранение конфигурации VIM..."
-        mkdir -p "$DATED_BACKUP_DIR/vim"
+        create_dir_safe "$DATED_BACKUP_DIR/vim"
         
         [[ -e "$HOME/.vimrc" ]] && copy_with_deref "$HOME/.vimrc" "$DATED_BACKUP_DIR/vim/"
         
         if [[ -d "$HOME/.vim" || -L "$HOME/.vim" ]]; then
           if [[ -L "$HOME/.vim" ]]; then
             echo "🔄 Обнаружена символическая ссылка .vim, копируем настоящую директорию"
-            local vim_target=$(readlink -f "$HOME/.vim")
+            local vim_target=$(readlink -f "$HOME/.vim" 2>/dev/null || readlink "$HOME/.vim")
             if [[ -d "$vim_target" ]]; then
-              cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim" || {
-                sudo cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"
-              }
+              if [[ "$OS_TYPE" == "linux" ]]; then
+                cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim" || sudo cp -a "$vim_target" "$DATED_BACKUP_DIR/vim/vim"
+              else
+                cp -R "$vim_target" "$DATED_BACKUP_DIR/vim/vim"
+              fi
             else
               echo -e "${YELLOW}⚠️ Ссылка .vim указывает на несуществующую директорию${RESET}"
             fi
           else
-            cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/" || {
-              echo -e "${YELLOW}⚠️ Ошибка при копировании .vim. Пробуем с sudo...${RESET}"
-              sudo cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"
-            }
+            if [[ "$OS_TYPE" == "linux" ]]; then
+              cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/" || sudo cp -a "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"
+            else
+              cp -R "$HOME/.vim" "$DATED_BACKUP_DIR/vim/"
+            fi
           fi
         fi
       fi
@@ -348,11 +454,23 @@ fi
 
 # Очищаем содержимое директории .myshell (кроме директории backup)
 echo -e "${BLUE}🧹 Очищаем содержимое директории $BASE_DIR (кроме бэкапов)...${RESET}"
-if find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 rm -rf 2>/dev/null; then
-  echo "✅ Старый контент удален"
+
+# Безопасная очистка в зависимости от ОС
+if [[ "$OS_TYPE" == "linux" ]]; then
+  if find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 rm -rf 2>/dev/null; then
+    echo "✅ Старый контент удален"
+  else
+    echo -e "${YELLOW}⚠️ Не удалось удалить старый контент. Пробуем с sudo...${RESET}"
+    sudo find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 sudo rm -rf
+  fi
 else
-  echo -e "${YELLOW}⚠️ Не удалось удалить старый контент. Пробуем с sudo...${RESET}"
-  sudo find "$BASE_DIR" -mindepth 1 ! -path "$BACKUP_DIR" ! -path "$BACKUP_DIR/*" -print0 | xargs -0 sudo rm -rf
+  # На macOS используем немного другой подход
+  for item in "$BASE_DIR"/*; do
+    if [[ "$item" != "$BACKUP_DIR" ]]; then
+      rm -rf "$item" 2>/dev/null
+    fi
+  done
+  echo "✅ Старый контент удален"
 fi
 
 #----------------------------------------------------
@@ -368,7 +486,11 @@ clean_ohmyzsh() {
     ( cd "$HOME" && exec /bin/rm -f .oh-my-zsh )
   elif [[ -d "$HOME/.oh-my-zsh" ]]; then
     echo "  - Обнаружена директория, удаляем рекурсивно..."
-    /bin/rm -rf "$HOME/.oh-my-zsh" || sudo /bin/rm -rf "$HOME/.oh-my-zsh"
+    if [[ "$OS_TYPE" == "linux" ]]; then
+      /bin/rm -rf "$HOME/.oh-my-zsh" || sudo /bin/rm -rf "$HOME/.oh-my-zsh"
+    else
+      /bin/rm -rf "$HOME/.oh-my-zsh"
+    fi
   fi
   
   # Проверяем, что удаление прошло успешно
@@ -386,7 +508,11 @@ install_ohmyzsh() {
   echo -e "${BLUE}📥 Установка Oh-My-Zsh...${RESET}"
   
   # Очищаем и создаем директорию в нашем окружении
-  mkdir -p "$BASE_DIR/ohmyzsh" || sudo mkdir -p "$BASE_DIR/ohmyzsh"
+  if [[ "$OS_TYPE" == "linux" ]]; then
+    mkdir -p "$BASE_DIR/ohmyzsh" || sudo mkdir -p "$BASE_DIR/ohmyzsh"
+  else
+    mkdir -p "$BASE_DIR/ohmyzsh"
+  fi
   
   # Клонируем репозиторий Oh-My-Zsh напрямую в наше окружение
   git clone --depth=1 "$GIT_OMZ_REPO" "$BASE_DIR/ohmyzsh" || {
@@ -435,38 +561,53 @@ else
   clean_ohmyzsh && install_ohmyzsh || exit 1
 fi
 
-# Удаляем отдельный блок перемещения Oh-My-Zsh, так как теперь установка
-# происходит непосредственно в наше окружение
-
 #----------------------------------------------------
 # 🧹 Чистим окружение
 #----------------------------------------------------
 
 # Функция для безопасного удаления файлов и директорий
 clean_item() {
-  local item="$1"
-  local target="$HOME/$item"
-  
-  # Проверяем тип элемента и удаляем соответственно
-  if [[ -L "$target" ]]; then
-    echo -e "🔗 Удаляем симлинк: ${CYAN}$target${RESET}"
-    rm "$target" 2>/dev/null || sudo rm "$target"
-  elif [[ -f "$target" ]]; then
-    echo -e "📄 Удаляем файл: ${CYAN}$target${RESET}"
-    rm "$target" 2>/dev/null || sudo rm "$target"
-  elif [[ -d "$target" ]]; then
-    echo -e "📁 Удаляем директорию: ${CYAN}$target${RESET}"
-    rm -rf "$target" 2>/dev/null || sudo rm -rf "$target"
-  else
-    echo -e "ℹ️  Пропускаем: ${CYAN}$target${RESET} (не найден)"
-  fi
+ local item="$1"
+ local target="$HOME/$item"
+ 
+ # Проверяем тип элемента и удаляем соответственно
+ if [[ -L "$target" ]]; then
+   echo -e "🔗 Удаляем симлинк: ${CYAN}$target${RESET}"
+   rm "$target" 2>/dev/null || {
+     if [[ "$OS_TYPE" == "linux" ]]; then
+       sudo rm "$target"
+     else
+       rm -f "$target"
+     fi
+   }
+ elif [[ -f "$target" ]]; then
+   echo -e "📄 Удаляем файл: ${CYAN}$target${RESET}"
+   rm "$target" 2>/dev/null || {
+     if [[ "$OS_TYPE" == "linux" ]]; then
+       sudo rm "$target"
+     else
+       rm -f "$target"
+     fi
+   }
+ elif [[ -d "$target" ]]; then
+   echo -e "📁 Удаляем директорию: ${CYAN}$target${RESET}"
+   rm -rf "$target" 2>/dev/null || {
+     if [[ "$OS_TYPE" == "linux" ]]; then
+       sudo rm -rf "$target"
+     else
+       rm -rf "$target"
+     fi
+   }
+ else
+   echo -e "ℹ️  Пропускаем: ${CYAN}$target${RESET} (не найден)"
+ fi
 }
 
 # Удаление старых конфигов и симлинков
 echo -e "${YELLOW}🧹 Удаляем старые конфиги и симлинки...${RESET}"
 
 for item in $TRASH; do
-  clean_item "$item"
+ clean_item "$item"
 done
 
 echo -e "${GREEN}✅ Очистка завершена.${RESET}"
@@ -475,99 +616,129 @@ echo -e "${GREEN}✅ Очистка завершена.${RESET}"
 # 📥 Клонируем окружение
 #----------------------------------------------------
 
-echo -e "${BLUE}📥 Клонируем tmux конфигурацию...${RESET}"
-git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" || {
-  echo -e "${YELLOW}⚠️ Ошибка при клонировании tmux. Проверяем права доступа...${RESET}"
-  sudo git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux"
+# Функция для клонирования репозитория с обработкой ошибок
+clone_repo() {
+ local repo_url="$1"
+ local target_dir="$2"
+ 
+ echo -e "${BLUE}📥 Клонируем $repo_url в $target_dir...${RESET}"
+ 
+ git clone "$repo_url" "$target_dir" || {
+   echo -e "${YELLOW}⚠️ Ошибка при клонировании. Проверяем права доступа...${RESET}"
+   if [[ "$OS_TYPE" == "linux" ]]; then
+     sudo git clone "$repo_url" "$target_dir"
+   else
+     rm -rf "$target_dir" 2>/dev/null
+     git clone "$repo_url" "$target_dir"
+   fi
+ }
 }
 
-echo -e "${BLUE}📥 Клонируем dotfiles...${RESET}"
-git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" || {
-  echo -e "${YELLOW}⚠️ Ошибка при клонировании dotfiles. Проверяем права доступа...${RESET}"
-  sudo git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles"
+# Функция для создания каталога с проверкой прав
+create_dir() {
+ local dir="$1"
+ 
+ mkdir -p "$dir" || {
+   echo -e "${YELLOW}⚠️ Не удалось создать директорию $dir. Пробуем с sudo...${RESET}"
+   if [[ "$OS_TYPE" == "linux" ]]; then
+     sudo mkdir -p "$dir"
+   else
+     mkdir -p "$dir"
+   fi
+ }
 }
 
-mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR" || {
-  echo -e "${YELLOW}⚠️ Не удалось создать директории для vim. Пробуем с sudo...${RESET}"
-  sudo mkdir -p "$VIM_COLORS_DIR" "$VIM_PLUGINS_DIR"
-}
+clone_repo "$GIT_TMUX_REPO" "$BASE_DIR/tmux"
+clone_repo "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles"
+
+create_dir "$VIM_COLORS_DIR"
+create_dir "$VIM_PLUGINS_DIR"
 
 if [[ ! -d "$VIM_COLORS_DIR/papercolor-theme" ]]; then
-  echo -e "${BLUE}📥 Клонируем PaperColor тему...${RESET}"
-  git clone "https://github.com/NLKNguyen/papercolor-theme.git" "$VIM_COLORS_DIR/papercolor-theme" || {
-    echo -e "${YELLOW}⚠️ Ошибка при клонировании темы. Проверяем права доступа...${RESET}"
-    sudo git clone "https://github.com/NLKNguyen/papercolor-theme.git" "$VIM_COLORS_DIR/papercolor-theme"
-  }
+ clone_repo "https://github.com/NLKNguyen/papercolor-theme.git" "$VIM_COLORS_DIR/papercolor-theme"
 else
-  echo -e "${GREEN}✅ PaperColor уже добавлен${RESET}"
+ echo -e "${GREEN}✅ PaperColor уже добавлен${RESET}"
 fi
 
-ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim" || {
-  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
-  sudo ln -sf "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
+# Создание символической ссылки с проверкой ОС
+create_symlink() {
+ local src="$1"
+ local dst="$2"
+ 
+ ln -sf "$src" "$dst" || {
+   echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
+   if [[ "$OS_TYPE" == "linux" ]]; then
+     sudo ln -sf "$src" "$dst"
+   else
+     rm -f "$dst" 2>/dev/null
+     ln -sf "$src" "$dst"
+   fi
+ }
 }
+
+create_symlink "$VIM_COLORS_DIR/papercolor-theme/colors/PaperColor.vim" "$VIM_COLORS_DIR/PaperColor.vim"
 
 echo "📦 Устанавливаем плагины для Zsh..."
-mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins" || {
-  echo -e "${YELLOW}⚠️ Не удалось создать директорию для плагинов. Пробуем с sudo...${RESET}"
-  sudo mkdir -p "$BASE_DIR/ohmyzsh/custom/plugins"
-}
+create_dir "$BASE_DIR/ohmyzsh/custom/plugins"
 
-git clone https://github.com/zsh-users/zsh-autosuggestions "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions" || {
-  echo -e "${YELLOW}⚠️ Ошибка при клонировании плагина. Проверяем права доступа...${RESET}"
-  sudo git clone https://github.com/zsh-users/zsh-autosuggestions "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"
-}
-
-git clone https://github.com/zsh-users/zsh-syntax-highlighting "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting" || {
-  echo -e "${YELLOW}⚠️ Ошибка при клонировании плагина. Проверяем права доступа...${RESET}"
-  sudo git clone https://github.com/zsh-users/zsh-syntax-highlighting "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"
-}
+clone_repo "https://github.com/zsh-users/zsh-autosuggestions" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-autosuggestions"
+clone_repo "https://github.com/zsh-users/zsh-syntax-highlighting" "$BASE_DIR/ohmyzsh/custom/plugins/zsh-syntax-highlighting"
 
 #----------------------------------------------------
 # ⚙️ Настройки окружения
 #----------------------------------------------------
 
 echo "⚙️ Настраиваем zsh..."
-ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc" || {
-  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
-  sudo ln -sf "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
-}
+create_symlink "$BASE_DIR/dotfiles/.zshrc" "$HOME/.zshrc"
 
 echo "⚙️ Настраиваем vim..."
-ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc" || sudo ln -sf "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc"
-ln -sfn "$VIM_DIR" "$HOME/.vim" || sudo ln -sfn "$VIM_DIR" "$HOME/.vim"
+create_symlink "$BASE_DIR/dotfiles/.vimrc" "$HOME/.vimrc"
+create_symlink "$VIM_DIR" "$HOME/.vim"
 
 echo "⚙️ Настраиваем tmux..."
-ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" || sudo ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
-ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local" || sudo ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
+create_symlink "$BASE_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
+create_symlink "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME/.tmux.conf.local"
 
 echo "⚙️ Настраиваем Oh-My-Zsh..."
-ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh" || {
-  echo -e "${YELLOW}⚠️ Не удалось создать символическую ссылку. Пробуем с sudo...${RESET}"
-  sudo ln -sfn "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
-}
-
-# Удаляем блок перемещения Oh-My-Zsh, так как теперь установка происходит напрямую в окружение
+create_symlink "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
 
 #----------------------------------------------------
 # 🧰 Проверка и установка ZShell по умолчанию
 #----------------------------------------------------
 if [[ "$(basename "$SHELL")" != "zsh" ]]; then
-  echo "🔁 Меняем shell на Zsh..."
-  ZSH_PATH=$(which zsh)
-  # Проверяем, есть ли уже zsh в /etc/shells
-  if ! grep -q "$ZSH_PATH" /etc/shells; then
-    echo -e "${YELLOW}⚠️ Добавляем $ZSH_PATH в /etc/shells...${RESET}"
-    echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
-  fi
-  
-  # Меняем оболочку по умолчанию с проверкой
-  if ! chsh -s "$ZSH_PATH" 2>/dev/null; then
-    echo -e "${YELLOW}⚠️ Не удалось изменить оболочку. Пробуем с sudo...${RESET}"
-    sudo chsh -s "$ZSH_PATH" "$USER"
-  fi
+ echo "🔁 Меняем shell на Zsh..."
+ ZSH_PATH=$(which zsh)
+ 
+ # Различия для Linux и macOS
+ if [[ "$OS_TYPE" == "linux" ]]; then
+   # Проверяем, есть ли уже zsh в /etc/shells
+   if ! grep -q "$ZSH_PATH" /etc/shells; then
+     echo -e "${YELLOW}⚠️ Добавляем $ZSH_PATH в /etc/shells...${RESET}"
+     echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
+   fi
+   
+   # Меняем оболочку по умолчанию с проверкой
+   if ! chsh -s "$ZSH_PATH" 2>/dev/null; then
+     echo -e "${YELLOW}⚠️ Не удалось изменить оболочку. Пробуем с sudo...${RESET}"
+     sudo chsh -s "$ZSH_PATH" "$USER"
+   fi
+ elif [[ "$OS_TYPE" == "macos" ]]; then
+   # На macOS проверяем иначе
+   if ! grep -q "$ZSH_PATH" /etc/shells; then
+     echo -e "${YELLOW}⚠️ Добавляем $ZSH_PATH в /etc/shells...${RESET}"
+     echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
+   fi
+   
+   # На macOS chsh работает немного иначе
+   chsh -s "$ZSH_PATH" || {
+     echo -e "${YELLOW}⚠️ Не удалось изменить оболочку. Попробуйте вручную:${RESET}"
+     echo "chsh -s $ZSH_PATH"
+   }
+ fi
+ 
+ echo -e "${GREEN}✅ Zsh установлен как оболочка по умолчанию. Изменения вступят в силу после перезапуска терминала.${RESET}"
 else
-  echo "✅ Zsh уже установлен как shell по умолчанию."
+ echo "✅ Zsh уже установлен как shell по умолчанию."
 fi
 
 #----------------------------------------------------
@@ -576,21 +747,64 @@ fi
 
 # Обновляем владельца всех файлов и директорий
 echo -e "${BLUE}🛠️ Установка правильных прав доступа...${RESET}"
-sudo chown -R "$USER":"$USER" "$BASE_DIR"
 
-# Проверяем, что символические ссылки существуют перед установкой прав
-for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
-  if [[ -L "$link" ]]; then
-    sudo chown -h "$USER":"$USER" "$link" 2>/dev/null
-  fi
-done
+if [[ "$OS_TYPE" == "linux" ]]; then
+ # Для Linux оставляем как было, так как это работало
+ sudo chown -R "$USER":"$USER" "$BASE_DIR"
+ 
+ # Проверяем, что символические ссылки существуют перед установкой прав
+ for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
+   if [[ -L "$link" ]]; then
+     sudo chown -h "$USER":"$USER" "$link" 2>/dev/null
+   fi
+ done
+elif [[ "$OS_TYPE" == "macos" ]]; then
+ # На macOS используем группу "staff", которая является стандартной группой пользователей
+ chown -R "$USER:staff" "$BASE_DIR" 2>/dev/null || {
+   # Если не сработало, пробуем без указания группы
+   echo -e "${YELLOW}⚠️ Не удалось установить владельца с группой staff. Пробуем без группы...${RESET}"
+   chown -R "$USER" "$BASE_DIR" 2>/dev/null
+ }
+ 
+ # Проверяем символические ссылки
+ for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
+   if [[ -L "$link" ]]; then
+     chown -h "$USER:staff" "$link" 2>/dev/null || chown -h "$USER" "$link" 2>/dev/null
+   fi
+ done
+fi
 
 #----------------------------------------------------
 # 🗑️ Очистка временной директории
 #----------------------------------------------------
-rm -rf "$HOME/init-shell" 2>/dev/null || sudo rm -rf "$HOME/init-shell"
+if [[ "$OS_TYPE" == "linux" ]]; then
+ rm -rf "$HOME/init-shell" 2>/dev/null || sudo rm -rf "$HOME/init-shell"
+else
+ rm -rf "$HOME/init-shell" 2>/dev/null
+fi
 
 #----------------------------------------------------
 # ✅ Завершено
 #----------------------------------------------------
 echo -e "${GREEN}🎉 Установка завершена успешно!${RESET}"
+
+# Информация о системе
+if [[ "$OS_TYPE" == "macos" ]]; then
+ echo -e "${BLUE}ℹ️  Информация о macOS:${RESET}"
+ echo "  📱 Версия macOS: $(sw_vers -productVersion)"
+ echo "  🔄 Архитектура: $(uname -m)"
+ echo "  🧩 Компоненты были установлены с помощью Homebrew"
+elif [[ "$OS_TYPE" == "linux" ]]; then
+ echo -e "${BLUE}ℹ️  Информация о Linux:${RESET}"
+ echo "  🐧 Дистрибутив: $DISTRO"
+ echo "  🔄 Архитектура: $(uname -m)"
+ if [[ -f /etc/os-release ]]; then
+   source /etc/os-release
+   echo "  📱 Версия: $NAME $VERSION_ID"
+ fi
+fi
+
+echo -e "${YELLOW}⚠️ Важно:${RESET} Для применения всех изменений может потребоваться перезапуск терминала"
+echo -e "${BLUE}🔍 Проверьте работу команд zsh, vim и tmux${RESET}"
+
+
