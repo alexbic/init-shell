@@ -89,19 +89,50 @@ fi
 echo -e "${BLUE}📦 Проверка и установка необходимых пакетов...${RESET}"
 
 NEEDED_PACKAGES=()
-for pkg in $PACKAGES; do
-  if ! dpkg -s "$pkg" &>/dev/null; then
-    NEEDED_PACKAGES+=("$pkg")
-  fi
-done
+OS_TYPE=$(uname)
 
-if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
-  echo "📦 Устанавливаем: ${NEEDED_PACKAGES[*]}"
-  sudo apt update
-  sudo apt install -y "${NEEDED_PACKAGES[@]}"
-else
-  echo "✅ Все необходимые пакеты уже установлены."
-fi
+install_packages_linux() {
+  for pkg in $PACKAGES; do
+    if ! dpkg -s "$pkg" &>/dev/null; then
+      NEEDED_PACKAGES+=("$pkg")
+    fi
+  done
+
+  if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
+    echo "📦 Устанавливаем (APT): ${NEEDED_PACKAGES[*]}"
+    sudo apt update
+    sudo apt install -y "${NEEDED_PACKAGES[@]}"
+  else
+    echo "✅ Все необходимые пакеты уже установлены (APT)."
+  fi
+}
+
+install_packages_macos() {
+  # Проверяем установлен ли brew
+  if ! command -v brew &>/dev/null; then
+    echo "🛠 Homebrew не найден. Устанавливаем..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+
+  for pkg in $PACKAGES; do
+    if ! brew list "$pkg" &>/dev/null; then
+      NEEDED_PACKAGES+=("$pkg")
+    fi
+  done
+
+  if [[ ${#NEEDED_PACKAGES[@]} -gt 0 ]]; then
+    echo "📦 Устанавливаем (brew): ${NEEDED_PACKAGES[*]}"
+    brew install "${NEEDED_PACKAGES[@]}"
+  else
+    echo "✅ Все необходимые пакеты уже установлены (brew)."
+  fi
+}
+
+case "$OS_TYPE" in
+  Linux*) install_packages_linux ;;
+  Darwin*) install_packages_macos ;;
+  *) echo "❌ Неизвестная операционная система: $OS_TYPE" ;;
+esac
 
 #----------------------------------------------------
 # 🔍 Проверка и обработка существующих конфигураций
