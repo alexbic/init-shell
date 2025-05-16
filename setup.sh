@@ -38,6 +38,7 @@ GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
 GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
 GIT_OMZ_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+GIT_WEZTERM_REPO="https://github.com/alexbic/wezterm-config.git"
 
 #----------------------------------------------------
 # 🧠 Определение операционной системы
@@ -703,6 +704,97 @@ echo "⚙️ Настраиваем Oh-My-Zsh..."
 create_symlink "$BASE_DIR/ohmyzsh" "$HOME/.oh-my-zsh"
 
 #----------------------------------------------------
+# 📦 Установка и настройка WezTerm (только для macOS)
+#----------------------------------------------------
+
+echo -e "${BLUE}📦 Проверка и настройка WezTerm...${RESET}"
+
+# Настройка WezTerm только на macOS
+if [[ "$OS_TYPE" == "macos" ]]; then
+  echo -e "${BLUE}🔍 Проверка наличия WezTerm...${RESET}"
+  
+  # Проверяем, установлен ли WezTerm
+  if command -v wezterm &>/dev/null; then
+    echo -e "${GREEN}✅ WezTerm найден в системе${RESET}"
+    
+    # Создаем директорию конфигурации, если она не существует
+    WEZTERM_CONFIG_DIR="$HOME/.config/wezterm"
+    mkdir -p "$WEZTERM_CONFIG_DIR" || {
+      echo -e "${YELLOW}⚠️ Не удалось создать директорию $WEZTERM_CONFIG_DIR. Пробуем ещё раз...${RESET}"
+      mkdir -p "$WEZTERM_CONFIG_DIR"
+    }
+    
+    # Определяем директорию для хранения конфигурации WezTerm в нашем окружении
+    WEZTERM_LOCAL_DIR="$BASE_DIR/wezterm"
+    create_dir "$WEZTERM_LOCAL_DIR"
+    
+    # Проверяем, существует ли уже конфигурация
+    if [[ -f "$WEZTERM_CONFIG_DIR/wezterm.lua" ]]; then
+      echo -e "${YELLOW}⚠️ Обнаружена существующая конфигурация WezTerm${RESET}"
+      read -p "📋 Хотите сохранить текущую конфигурацию WezTerm перед обновлением? (y/n): " SAVE_WEZTERM_CONFIG
+      
+      if [[ "$SAVE_WEZTERM_CONFIG" =~ ^[Yy]$ ]]; then
+        # Создаем директорию для бэкапа, если это необходимо
+        create_dir "$DATED_BACKUP_DIR/wezterm"
+        echo "🔄 Сохранение конфигурации WezTerm..."
+        cp -R "$WEZTERM_CONFIG_DIR"/* "$DATED_BACKUP_DIR/wezterm/" 2>/dev/null || echo "Ошибка при копировании, но продолжаем..."
+        echo -e "${GREEN}✅ Конфигурация WezTerm сохранена в бэкапе${RESET}"
+      fi
+      
+      # Удаляем старую конфигурацию
+      rm -rf "$WEZTERM_CONFIG_DIR"/* 2>/dev/null
+    fi
+    
+    # Клонируем репозиторий с настройками WezTerm
+    clone_repo "$GIT_WEZTERM_REPO" "$WEZTERM_LOCAL_DIR"
+    
+    # Копируем файлы из клонированного репозитория в конфигурационную директорию
+    echo "🔄 Копирование конфигурации WezTerm..."
+    cp -R "$WEZTERM_LOCAL_DIR"/* "$WEZTERM_CONFIG_DIR/" 2>/dev/null || {
+      echo -e "${YELLOW}⚠️ Ошибка при копировании. Пробуем ещё раз...${RESET}"
+      cp -R "$WEZTERM_LOCAL_DIR"/* "$WEZTERM_CONFIG_DIR/"
+    }
+    
+    echo -e "${GREEN}✅ Конфигурация WezTerm успешно установлена${RESET}"
+  else
+    echo -e "${YELLOW}⚠️ WezTerm не найден в системе${RESET}"
+    read -p "📋 Хотите установить WezTerm? (y/n): " INSTALL_WEZTERM
+    
+    if [[ "$INSTALL_WEZTERM" =~ ^[Yy]$ ]]; then
+      # Проверяем наличие Homebrew
+      if command -v brew &>/dev/null; then
+        echo "🔄 Установка WezTerm через Homebrew..."
+        brew install --cask wezterm
+        
+        # После установки продолжаем с настройкой
+        echo -e "${BLUE}🔄 Настраиваем WezTerm после установки...${RESET}"
+        
+        # Создаем директорию конфигурации
+        WEZTERM_CONFIG_DIR="$HOME/.config/wezterm"
+        mkdir -p "$WEZTERM_CONFIG_DIR"
+        
+        # Определяем директорию для хранения конфигурации WezTerm
+        WEZTERM_LOCAL_DIR="$BASE_DIR/wezterm"
+        create_dir "$WEZTERM_LOCAL_DIR"
+        
+        # Клонируем репозиторий и копируем настройки
+        clone_repo "$GIT_WEZTERM_REPO" "$WEZTERM_LOCAL_DIR"
+        cp -R "$WEZTERM_LOCAL_DIR"/* "$WEZTERM_CONFIG_DIR/" 2>/dev/null
+        
+        echo -e "${GREEN}✅ WezTerm успешно установлен и настроен${RESET}"
+      else
+        echo -e "${RED}❌ Homebrew не установлен. Установите WezTerm вручную с официального сайта.${RESET}"
+        echo "   https://wezfurlong.org/wezterm/installation.html"
+      fi
+    else
+      echo -e "${YELLOW}⚠️ Пропускаем установку и настройку WezTerm${RESET}"
+    fi
+  fi
+else
+  echo -e "${CYAN}ℹ️  Пропускаем настройку WezTerm (не macOS)${RESET}"
+fi
+
+#----------------------------------------------------
 # 🧰 Проверка и установка ZShell по умолчанию
 #----------------------------------------------------
 if [[ "$(basename "$SHELL")" != "zsh" ]]; then
@@ -767,8 +859,8 @@ elif [[ "$OS_TYPE" == "macos" ]]; then
  }
  
  # Проверяем символические ссылки
- for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
-   if [[ -L "$link" ]]; then
+ for link in "$HOME/.oh-my-zsh" "$HOME/.vim" "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME/.tmux.conf.local" "$HOME/.config/wezterm"; do
+   if [[ -L "$link" || -d "$link" ]]; then
      chown -h "$USER:staff" "$link" 2>/dev/null || chown -h "$USER" "$link" 2>/dev/null
    fi
  done
@@ -794,6 +886,11 @@ if [[ "$OS_TYPE" == "macos" ]]; then
  echo "  📱 Версия macOS: $(sw_vers -productVersion)"
  echo "  🔄 Архитектура: $(uname -m)"
  echo "  🧩 Компоненты были установлены с помощью Homebrew"
+ if command -v wezterm &>/dev/null; then
+   echo "  🖥️ WezTerm установлен и настроен"
+ else
+   echo "  🖥️ WezTerm не установлен"
+ fi
 elif [[ "$OS_TYPE" == "linux" ]]; then
  echo -e "${BLUE}ℹ️  Информация о Linux:${RESET}"
  echo "  🐧 Дистрибутив: $DISTRO"
@@ -806,5 +903,6 @@ fi
 
 echo -e "${YELLOW}⚠️ Важно:${RESET} Для применения всех изменений может потребоваться перезапуск терминала"
 echo -e "${BLUE}🔍 Проверьте работу команд zsh, vim и tmux${RESET}"
-
-
+if [[ "$OS_TYPE" == "macos" && -d "$HOME/.config/wezterm" ]]; then
+  echo -e "${BLUE}🔍 Также проверьте работу WezTerm${RESET}"
+fi
