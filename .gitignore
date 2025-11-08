@@ -1,0 +1,30 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# macOS directory metadata
+Icon?
+.Spotlight-V100
+.Trashes
+
+# Logs
+*.log
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+tmp/
+temp/
+dev.code-workspace
+vps/
+vps/*
+
+# Environment
+.env
+
+
