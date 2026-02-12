@@ -162,9 +162,131 @@ echo -e "${GREEN}🎉 Директории созданы.${RESET}"
 # 🍎 Установка компонентов для macOS
 # ----------------------------------------------------
 if [[ "$OS_TYPE" == "darwin" ]]; then
-    # ... (Существующая логика macOS) ...
-    
-    echo -e "${RED}⚠️  Установка для macOS в этом скрипте не обновлена!${RESET}"
+    echo -e "${YELLOW}🍎 Инициализация macOS...${RESET}"
+
+    # ------------------------------------------------
+    # 📦 Проверка и установка Homebrew
+    # ------------------------------------------------
+    if ! command -v brew &>/dev/null; then
+        echo -e "${CYAN}🛠️ Установка Homebrew...${RESET}"
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        # Добавление brew в PATH для Apple Silicon
+        if [[ -d "/opt/homebrew/bin" ]]; then
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME_DIR/.zprofile"
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+        fi
+        echo -e "${GREEN}🎉 Homebrew установлен.${RESET}"
+    else
+        echo -e "${GREEN}🎉 Homebrew уже установлен. Пропускаем.${RESET}"
+        # Обновление brew
+        echo -e "${YELLOW}-> Обновление Homebrew...${RESET}"
+        brew update --quiet 2>/dev/null || true
+    fi
+
+    # ------------------------------------------------
+    # 🛠️ Установка базовых пакетов
+    # ------------------------------------------------
+    echo -e "${CYAN}🛠️ Установка базовых пакетов (git, zsh, vim, tmux)...${RESET}"
+    brew install git zsh vim tmux curl 2>/dev/null || true
+
+    # ------------------------------------------------
+    # 🐳 Docker Desktop (опционально, через --auto)
+    # ------------------------------------------------
+    if [[ "$SILENT_MODE" -eq 1 ]]; then
+        if ! command -v docker &>/dev/null; then
+            echo -e "${CYAN}🛠️ Установка Docker Desktop...${RESET}"
+            brew install --cask docker 2>/dev/null || true
+            echo -e "${YELLOW}-> Запустите Docker Desktop из Applications для завершения установки.${RESET}"
+        else
+            echo -e "${GREEN}🎉 Docker уже установлен.${RESET}"
+        fi
+
+        # ZeroTier (опционально)
+        if ! command -v zerotier-cli &>/dev/null; then
+            echo -e "${CYAN}🛠️ Установка ZeroTier...${RESET}"
+            brew install zerotier-one 2>/dev/null || true
+            echo -e "${GREEN}🎉 ZeroTier установлен.${RESET}"
+        fi
+
+        # Подключение к сети ZeroTier
+        if [[ -n "$ZEROTIER_NETWORK_ID" ]] && [[ "$ZEROTIER_NETWORK_ID" != "<ВСТАВЬТЕ_ID_СЕТИ_ЗДЕСЬ_ДЛЯ_ОБЫЧНОГО_РЕЖИМА>" ]]; then
+            echo -e "${YELLOW}-> Подключение к сети ZeroTier ID: $ZEROTIER_NETWORK_ID...${RESET}"
+            sudo zerotier-cli join "$ZEROTIER_NETWORK_ID" 2>/dev/null || true
+            echo -e "${GREEN}🎉 ZeroTier: Команда подключения выполнена.${RESET}"
+        fi
+    fi
+
+    # ------------------------------------------------
+    # 🔗 Установка Oh My Zsh
+    # ------------------------------------------------
+    if [[ ! -d "$BASE_DIR/ohmyzsh" ]] && [[ ! -d "$HOME_DIR/.oh-my-zsh" ]]; then
+        echo -e "${CYAN}🛠️ Установка Oh My Zsh...${RESET}"
+        sh -c "$(curl -fsSL $GIT_OMZ_INSTALL_URL)" "" --unattended || true
+        # Перемещаем в .myshell
+        if [[ -d "$HOME_DIR/.oh-my-zsh" ]] && [[ ! -L "$HOME_DIR/.oh-my-zsh" ]]; then
+            mv "$HOME_DIR/.oh-my-zsh" "$BASE_DIR/ohmyzsh"
+            ln -sf "$BASE_DIR/ohmyzsh" "$HOME_DIR/.oh-my-zsh"
+        fi
+        rm -rf "$HOME_DIR/.oh-my-zsh/ohmyzsh" 2>/dev/null || true
+        echo -e "${GREEN}🎉 Oh My Zsh установлен.${RESET}"
+    elif [[ -d "$BASE_DIR/ohmyzsh" ]]; then
+        echo -e "${GREEN}🎉 Oh My Zsh уже установлен в .myshell.${RESET}"
+        ln -sf "$BASE_DIR/ohmyzsh" "$HOME_DIR/.oh-my-zsh"
+    else
+        echo -e "${GREEN}🎉 Oh My Zsh уже установлен. Пропускаем.${RESET}"
+    fi
+
+    # ------------------------------------------------
+    # 🗄️ Настройка Dotfiles (используем локальные)
+    # ------------------------------------------------
+    echo -e "${CYAN}🛠️ Настройка Dotfiles...${RESET}"
+
+    # Если dotfiles нет в .myshell, пробуем склонировать
+    if [[ ! -d "$BASE_DIR/dotfiles" ]] && [[ -n "$GIT_DOTFILES_REPO" ]]; then
+        echo -e "${YELLOW}-> Клонирование Dotfiles из репозитория...${RESET}"
+        mkdir -p "$BASE_DIR/dotfiles"
+        git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" 2>/dev/null || true
+    fi
+
+    # Создание символических ссылок
+    echo -e "${YELLOW}-> Создание символических ссылок...${RESET}"
+    declare -a dotfiles=(".zshrc" ".vimrc")
+    for file in "${dotfiles[@]}"; do
+        link="$HOME_DIR/$file"
+        source_file="$BASE_DIR/dotfiles/$file"
+
+        if [[ -f "$source_file" ]]; then
+            ln -sf "$source_file" "$link"
+            echo -e "${BLUE}   Создана ссылка: $file${RESET}"
+        fi
+    done
+
+    # Настройка TMUX
+    echo -e "${YELLOW}-> Настройка tmux...${RESET}"
+    if [[ ! -d "$BASE_DIR/tmux" ]]; then
+        echo -e "${CYAN}-> Клонирование tmux конфигурации...${RESET}"
+        git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" 2>/dev/null || true
+    fi
+
+    if [[ -f "$BASE_DIR/tmux/.tmux.conf" ]]; then
+        ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME_DIR/.tmux.conf"
+        echo -e "${BLUE}   Создана ссылка: .tmux.conf${RESET}"
+    fi
+
+    # .tmux.conf.local - сначала из dotfiles, если нет - копируем шаблон
+    if [[ -f "$BASE_DIR/dotfiles/.tmux.conf.local" ]]; then
+        ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME_DIR/.tmux.conf.local"
+        echo -e "${BLUE}   Создана ссылка: .tmux.conf.local${RESET}"
+    elif [[ -f "$BASE_DIR/tmux/.tmux.conf.local" ]] && [[ ! -f "$HOME_DIR/.tmux.conf.local" ]]; then
+        cp "$BASE_DIR/tmux/.tmux.conf.local" "$HOME_DIR/"
+        echo -e "${BLUE}   Создан файл: .tmux.conf.local${RESET}"
+    fi
+
+    # Смена оболочки на zsh (если не уже)
+    if [[ "$SHELL" != */zsh ]]; then
+        echo -e "${YELLOW}-> Смена оболочки на zsh...${RESET}"
+        chsh -s $(which zsh) 2>/dev/null || echo -e "${YELLOW}   (Смена оболочки требует пароль или пройдена ранее)${RESET}"
+    fi
 
 # ----------------------------------------------------
 # 🐧 Установка компонентов для Linux (Ubuntu/Debian)
@@ -249,7 +371,7 @@ fi
 echo -e "\n${GREEN}🎉 Установка завершена успешно!${RESET}"
 
 # Информация о системе
-if [[ "$OS_TYPE" == "macos" ]]; then
+if [[ "$OS_TYPE" == "darwin" ]]; then
  echo -e "${BLUE}ℹ️  Информация о macOS:${RESET}"
  echo "  📱 Версия macOS: $(sw_vers -productVersion)"
  echo "  🔄 Архитектура: $(uname -m)"
@@ -270,8 +392,10 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
 fi
 
 echo -e "${YELLOW}ℹ️  ВАЖНО:${RESET}"
-echo "   - Для применения изменений в группе 'docker' вам может потребоваться перелогиниться."
+echo "   - Для применения изменений перезапустите терминал или выполните: source ~/.zshrc"
 echo "   - Если использовался тихий режим (--auto), убедитесь, что вы авторизовали ${CYAN}ZeroTier${RESET} в веб-панели управления."
-echo "   - Для входа в систему используйте порт ${CYAN}2306${RESET}."
+if [[ "$OS_TYPE" == "linux" ]]; then
+    echo "   - Для входа в систему используйте порт ${CYAN}2306${RESET}."
+fi
 
 exit 0
