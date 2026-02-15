@@ -1,40 +1,40 @@
 # init-shell
 
-Скрипт для автоматической настройки пользовательского окружения на новом сервере. 
+Автоматический скрипт настройки пользовательского окружения на новом сервере (macOS и Linux).
 
 ## Что делает скрипт
 
-- Устанавливает Zsh, Oh-My-Zsh и tmux
+### Базовая настройка
+- Устанавливает **Zsh** и **Oh-My-Zsh** с полезными плагинами
+- Устанавливает **tmux** с конфигурацией от gpakosz
+- Устанавливает **zoxide** для умной навигации по директориям
+- Устанавливает **Homebrew** (пакетный менеджер) на macOS и Linux
 - Создаёт директорию пользовательского окружения `~/.myshell`
-- Создаёт бэкап старых конфигов, таких как `.zshrc`, `.tmux.conf` и других в `~/.myshell/backup`
-- Клонирует ваши настройки для `zshrc`, `tmux` (`.dotfiles`)
-- Настраивает симлинки в домашнюю директорию (`$HOME`)
-- Устанавливает полезные плагины для zsh, такие как `zsh-autosuggestions` и `zsh-syntax-highlighting`
-- Удаляет временную директорию после завершения.
-  
+- Создаёт бэкап старых конфигов в `~/.myshell/backup`
+- Клонирует и настраивает dotfiles (`.zshrc`, `.vimrc`, `.tmux.conf`, `.tmux.conf.local`)
+- **Меняет shell по умолчанию на zsh**
+
+### VPS режим (`--auto`)
+При запуске с флагом `--auto` дополнительно устанавливает:
+- **Docker** и **Docker Compose V2**
+- **ZeroTier** с автоматическим подключением к сети (если задана переменная `ZEROTIER_NETWORK_ID`)
+
 ## Структура проекта
 
 После выполнения скрипта будет создана следующая структура:
+
 ```text
 ~/.myshell/
-├── backup/     # Резервные копии сохранённые перед исполнение скрипта (.zshrc, .tmux.conf, .myshell)
-├── dotfiles/   # Ваши dotfiles (.zshrc, .tmux.conf.local и т.д.)
-|                 `https://github.com/alexbic/.dotfiles.git`
-├── tmux/       # Конфигурация tmux от gpakosz
-|                 `https://github.com/gpakosz/.tmux.git`
-└── ohmyzsh/    # Установленная версия Oh-My-Zsh и плагины
-                 `https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh`
-                 `https://github.com/zsh-users/zsh-autosuggestions`
-                 `https://github.com/zsh-users/zsh-syntax-highlighting`
-```                 
-Внимание!
-• Скрипт выполняет удаление старых конфигов и временных файлов, поэтому будьте внимательны, если у вас есть важные
-настройки в файлах, которые скрипт перемещает или удаляет.
+├── backup/          # Резервные копии существующих конфигов
+├── dotfiles/        # Ваши dotfiles (.zshrc, .tmux.conf.local и т.д.)
+├── tmux/            # Конфигурация tmux от gpakosz
+├── ohmyzsh/         # Установленная версия Oh-My-Zsh
+└── vim/             # Vim цвета и плагины
+```
 
-## Как использовать
+## Использование
 
-Просто выполните следующие команды в терминале:
-
+### Обычный режим (интерактивный)
 ```bash
 cd ~
 git clone https://github.com/alexbic/init-shell.git
@@ -42,3 +42,28 @@ chmod +x init-shell/setup.sh
 ./init-shell/setup.sh
 ```
 
+### VPS режим (автоматический)
+```bash
+export ZEROTIER_NETWORK_ID="your-network-id"
+./init-shell/setup.sh --auto
+```
+
+Переменная окружения `ZEROTIER_NETWORK_ID` может быть задана через cloud-config для автоматического подключения к сети ZeroTier.
+
+## Что устанавливается
+
+| Компонент | macOS | Linux (VPS) |
+|-----------|-------|---------------|
+| Homebrew | ✅ | ✅ |
+| Zsh + Oh-My-Zsh | ✅ | ✅ |
+| tmux | ✅ | ✅ |
+| zoxide | ✅ | ✅ |
+| Vim | ✅ | ✅ |
+| zsh-autosuggestions | ✅ | ✅ |
+| zsh-syntax-highlighting | ✅ | ✅ |
+| Docker + Compose V2 | --auto | ✅ (--auto) |
+| ZeroTier | --auto | ✅ (--auto) |
+
+## Предупреждение
+
+⚠️ Скрипт выполняет удаление и перемещение старых конфигурационных файлов. Сохраните важные настройки перед запуском.
