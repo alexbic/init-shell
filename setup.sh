@@ -328,7 +328,7 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
     # 🗄️ Настройка Dotfiles
     # ------------------------------------------------
     echo -e "${CYAN}🛠️ Клонирование и настройка Dotfiles...${RESET}"
-    git clone "$GIT_DOTFILES_REPO" "$BASE_DIR" 2>/dev/null || true
+    git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" 2>/dev/null || true
     
     # Создание символических ссылок
     echo -e "${YELLOW}-> Создание символических ссылок...${RESET}"
