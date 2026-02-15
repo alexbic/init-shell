@@ -186,8 +186,8 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     # ------------------------------------------------
     # 🛠️    Установка базовых пакетов
     # ------------------------------------------------
-    echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim, tmux)...${RESET}"
-    brew install git zsh vim tmux curl 2>/dev/null || true
+    echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim, tmux, eza)...${RESET}"
+    brew install git zsh vim tmux curl eza 2>/dev/null || true
 
     # ------------------------------------------------
     # 🐳 Docker Desktop (опционально, через --auto)
@@ -408,6 +408,15 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
         echo -e "${GREEN}✅ zoxide установлен${RESET}"
     else
         echo -e "${GREEN}✅ zoxide уже установлен${RESET}"
+    fi
+
+    # Установка eza (улучшенный ls)
+    if ! command -v eza &>/dev/null; then
+        echo -e "${CYAN}🛠️    Установка eza через Homebrew...${RESET}"
+        brew install eza 2>/dev/null || true
+        echo -e "${GREEN}✅ eza установлен${RESET}"
+    else
+        echo -e "${GREEN}✅ eza уже установлен${RESET}"
     fi
 
     # ------------------------------------------------
