@@ -39,7 +39,7 @@ BACKUP_DIR="$BASE_DIR/backup"
 DATED_BACKUP_DIR="$BACKUP_DIR/backup_$TIMESTAMP"
 
 # 🧹 Шаблоны файлов для очистки
-TRASH=".zsh* .tmux* .vim* .oh-my-zsh* .vimrc .tmux.conf"
+TRASH=".zshrc .tmux* .vim* .oh-my-zsh* .vimrc .tmux.conf"
 
 # 📂 Директории для компонентов
 VIM_DIR="$BASE_DIR/vim"
@@ -48,7 +48,6 @@ VIM_PLUGINS_DIR="$VIM_DIR/plugins"
 
 # 🔗 Git-репозитории
 GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
-GIT_TMUX_REPO="https://github.com/gpakosz/.tmux.git"
 GIT_OMZ_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
 # ... (и другие репозитории) ...
@@ -186,8 +185,8 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     # ------------------------------------------------
     # 🛠️    Установка базовых пакетов
     # ------------------------------------------------
-    echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim, tmux, eza)...${RESET}"
-    brew install git zsh vim tmux curl eza 2>/dev/null || true
+    echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim, eza, jq)...${RESET}"
+    brew install git zsh vim curl eza jq 2>/dev/null || true
 
     # ------------------------------------------------
     # 🐳 Docker Desktop (опционально, через --auto)
@@ -271,6 +270,17 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     fi
 
     # ------------------------------------------------
+    # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
+    # ------------------------------------------------
+    if ! command -v herdr &>/dev/null; then
+        echo -e "${CYAN}🛠️    Установка Herdr...${RESET}"
+        curl -fsSL https://herdr.dev/install.sh | sh
+        echo -e "${GREEN}✅ Herdr установлен${RESET}"
+    else
+        echo -e "${GREEN}✅ Herdr уже установлен${RESET}"
+    fi
+
+    # ------------------------------------------------
     # 🗄️    Настройка Dotfiles (используем локальные)
     # ------------------------------------------------
     echo -e "${CYAN}🛠️    Настройка Dotfiles...${RESET}"
@@ -295,27 +305,6 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
         fi
     done
 
-    # Настройка TMUX
-    echo -e "${YELLOW}-> Настройка tmux...${RESET}"
-    if [[ ! -d "$BASE_DIR/tmux" ]]; then
-        echo -e "${CYAN}-> Клонирование tmux конфигурации...${RESET}"
-        git clone "$GIT_TMUX_REPO" "$BASE_DIR/tmux" 2>/dev/null || true
-    fi
-
-    if [[ -f "$BASE_DIR/tmux/.tmux.conf" ]]; then
-        ln -sf "$BASE_DIR/tmux/.tmux.conf" "$HOME_DIR/.tmux.conf"
-        echo -e "${BLUE}   Создана ссылка: .tmux.conf${RESET}"
-    fi
-
-    # .tmux.conf.local - сначала из dotfiles, если нет - копируем шаблон
-    if [[ -f "$BASE_DIR/dotfiles/.tmux.conf.local" ]]; then
-        ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME_DIR/.tmux.conf.local"
-        echo -e "${BLUE}   Создана ссылка: .tmux.conf.local${RESET}"
-    elif [[ -f "$BASE_DIR/tmux/.tmux.conf.local" ]] && [[ ! -f "$HOME_DIR/.tmux.conf.local" ]]; then
-        cp "$BASE_DIR/tmux/.tmux.conf.local" "$HOME_DIR/"
-        echo -e "${BLUE}   Создан файл: .tmux.conf.local${RESET}"
-    fi
-
     # Смена оболочки на zsh (если не уже)
     if [[ "$SHELL" != */zsh ]]; then
         echo -e "${YELLOW}-> Смена оболочки на zsh...${RESET}"
@@ -330,9 +319,9 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
 
     # Установка базовых пакетов (если их нет)
     if [[ "$DISTRO" == "ubuntu" ]] || [[ "$DISTRO" == "debian" ]]; then
-        echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim)...${RESET}"
+        echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim, jq)...${RESET}"
         sudo apt-get update -y
-        sudo apt-get install -y git zsh vim curl || true
+        sudo apt-get install -y git zsh vim curl jq || true
     fi
 
     # =========================================================
@@ -420,6 +409,17 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
     fi
 
     # ------------------------------------------------
+    # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
+    # ------------------------------------------------
+    if ! command -v herdr &>/dev/null; then
+        echo -e "${CYAN}🛠️    Установка Herdr...${RESET}"
+        curl -fsSL https://herdr.dev/install.sh | sh
+        echo -e "${GREEN}✅ Herdr установлен${RESET}"
+    else
+        echo -e "${GREEN}✅ Herdr уже установлен${RESET}"
+    fi
+
+    # ------------------------------------------------
 
     # Смена оболочки на zsh (если не уже)
     if [[ "$SHELL" != */zsh ]]; then
@@ -436,7 +436,7 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
 
     # Создание символических ссылок
     echo -e "${YELLOW}-> Создание символических ссылок...${RESET}"
-    declare -a dotfiles=(".zshrc" ".bashrc" ".tmux.conf" ".vimrc" ".tmux.conf.local")
+    declare -a dotfiles=(".zshrc" ".bashrc" ".vimrc")
     for file in "${dotfiles[@]}"; do
         link="$HOME_DIR/$file"
         source_file="$BASE_DIR/dotfiles/$file"
@@ -446,28 +446,6 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
             echo -e "${BLUE}   Создана ссылка: $file${RESET}"
         fi
     done
-
-    # Настройка TMUX
-    echo -e "${YELLOW}-> Настройка .tmux.conf.local...${RESET}"
-    git clone "$GIT_TMUX_REPO" "$HOME_DIR/.tmux" 2>/dev/null || true
-    ln -s -f "$HOME_DIR/.tmux/.tmux.conf" "$HOME_DIR"
-
-    # Установка tpm (tmux plugin manager)
-    echo -e "${YELLOW}-> Установка tmux plugin manager (tpm)...${RESET}"
-    if [[ ! -d "$HOME_DIR/.tmux/plugins/tpm" ]]; then
-        git clone https://github.com/tmux-plugins/tpm "$HOME_DIR/.tmux/plugins/tpm" 2>/dev/null || true
-        echo -e "${GREEN}🎉 tpm установлен.${RESET}"
-    else
-        echo -e "${GREEN}🎉 tpm уже установлен. Пропускаем.${RESET}"
-    fi
-
-    # Создание .tmux.conf.local
-    if [[ -f "$BASE_DIR/dotfiles/.tmux.conf.local" ]]; then
-        ln -sf "$BASE_DIR/dotfiles/.tmux.conf.local" "$HOME_DIR/.tmux.conf.local"
-        echo -e "${BLUE}   Создана ссылка: .tmux.conf.local${RESET}"
-    else
-        cp "$HOME_DIR/.tmux/.tmux.conf.local" "$HOME_DIR" 2>/dev/null || true
-    fi
 
     # Установка владельца для символических ссылок
     echo -e "${YELLOW}-> Установка владельца для ссылок...${RESET}"
@@ -501,6 +479,11 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
  else
    echo "  🖥️    WezTerm не установлен"
  fi
+ if command -v herdr &>/dev/null; then
+   echo "  🐑 Herdr установлен"
+ else
+   echo "  🐑 Herdr не установлен"
+ fi
 elif [[ "$OS_TYPE" == "linux" ]]; then
  echo -e "${BLUE}ℹ️     Информация о Linux:${RESET}"
  echo "  🐧 Дистрибутив: $DISTRO"
@@ -508,6 +491,11 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
  if [[ -f /etc/os-release ]]; then
    source /etc/os-release
    echo "  📱 Версия: $NAME $VERSION_ID"
+ fi
+ if command -v herdr &>/dev/null; then
+   echo "  🐑 Herdr установлен"
+ else
+   echo "  🐑 Herdr не установлен"
  fi
 fi
 

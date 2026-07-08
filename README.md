@@ -2,16 +2,19 @@
 
 Автоматический скрипт настройки пользовательского окружения на новом сервере (macOS и Linux).
 
+> Начиная с этой версии скрипт устанавливает [Herdr](https://herdr.dev) вместо tmux. Если предпочитаете tmux — последняя версия зафиксирована в ветке [`tmux`](https://github.com/alexbic/init-shell/tree/tmux).
+
 ## Что делает скрипт
 
 ### Базовая настройка
 - Устанавливает **Zsh** и **Oh-My-Zsh** с полезными плагинами
-- Устанавливает **tmux** с конфигурацией от gpakosz
+- Устанавливает **Herdr** — agent-aware терминальный мультиплексор (замена tmux)
 - Устанавливает **zoxide** для умной навигации по директориям
+- Устанавливает **jq** (нужен обёртке `claude()` из dotfiles для работы с Herdr API)
 - Устанавливает **Homebrew** (пакетный менеджер) на macOS и Linux
 - Создаёт директорию пользовательского окружения `~/.myshell`
 - Создаёт бэкап старых конфигов в `~/.myshell/backup`
-- Клонирует и настраивает dotfiles (`.zshrc`, `.vimrc`, `.tmux.conf`, `.tmux.conf.local`)
+- Клонирует и настраивает dotfiles (`.zshrc`, `.vimrc`)
 - **Меняет shell по умолчанию на zsh**
 
 ### VPS режим (`--auto`)
@@ -26,11 +29,12 @@
 ```text
 ~/.myshell/
 ├── backup/          # Резервные копии существующих конфигов
-├── dotfiles/        # Ваши dotfiles (.zshrc, .tmux.conf.local и т.д.)
-├── tmux/            # Конфигурация tmux от gpakosz
+├── dotfiles/        # Ваши dotfiles (.zshrc и т.д.)
 ├── ohmyzsh/         # Установленная версия Oh-My-Zsh
 └── vim/             # Vim цвета и плагины
 ```
+
+Herdr устанавливается официальным инсталлятором (`herdr.dev/install.sh`) как отдельный бинарник, вне `~/.myshell` — конфиг (опциональный) живёт в `~/.config/herdr/config.toml`.
 
 ## Использование
 
@@ -56,8 +60,9 @@ export ZEROTIER_NETWORK_ID="your-network-id"
 |-----------|-------|---------------|
 | Homebrew | ✅ | ✅ |
 | Zsh + Oh-My-Zsh | ✅ | ✅ |
-| tmux | ✅ | ✅ |
+| Herdr | ✅ | ✅ |
 | zoxide | ✅ | ✅ |
+| jq | ✅ | ✅ |
 | Vim | ✅ | ✅ |
 | zsh-autosuggestions | ✅ | ✅ |
 | zsh-syntax-highlighting | ✅ | ✅ |
