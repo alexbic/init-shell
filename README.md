@@ -11,6 +11,7 @@
 - Устанавливает **Herdr** — agent-aware терминальный мультиплексор (замена tmux)
 - Устанавливает **zoxide** для умной навигации по директориям
 - Устанавливает **eza** (современная замена `ls` с иконками)
+- Устанавливает **gh** (GitHub CLI)
 - Устанавливает **Nerd Font** (CaskaydiaCove) для иконок в `eza`/`ls` и prompt
 - Устанавливает **jq** (нужен обёртке `claude()` из dotfiles для работы с Herdr API)
 - Устанавливает **Homebrew** (пакетный менеджер) на macOS и Linux
@@ -90,6 +91,7 @@ pwsh -File .\setup.ps1
 | Herdr | ✅ | ✅ |
 | zoxide | ✅ | ✅ |
 | eza | ✅ | ✅ |
+| gh (GitHub CLI) | ✅ | ✅ |
 | Nerd Font (CaskaydiaCove) | ✅ | ✅ |
 | jq | ✅ | ✅ |
 | Vim | ✅ | ✅ |

@@ -316,6 +316,17 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     fi
 
     # ------------------------------------------------
+    # 🐙 Установка GitHub CLI (gh)
+    # ------------------------------------------------
+    if ! command -v gh &>/dev/null; then
+        echo -e "${CYAN}🛠️    Установка GitHub CLI (gh)...${RESET}"
+        brew install gh 2>/dev/null || true
+        echo -e "${GREEN}✅ gh установлен${RESET}"
+    else
+        echo -e "${GREEN}✅ gh уже установлен${RESET}"
+    fi
+
+    # ------------------------------------------------
     # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
     # ------------------------------------------------
     if ! command -v herdr &>/dev/null; then
@@ -456,6 +467,17 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
 
     # 🔤 Установка Nerd Font (иконки для eza/ls)
     install_nerd_font
+
+    # ------------------------------------------------
+    # 🐙 Установка GitHub CLI (gh)
+    # ------------------------------------------------
+    if ! command -v gh &>/dev/null; then
+        echo -e "${CYAN}🛠️    Установка GitHub CLI (gh) через Homebrew...${RESET}"
+        brew install gh 2>/dev/null || true
+        echo -e "${GREEN}✅ gh установлен${RESET}"
+    else
+        echo -e "${GREEN}✅ gh уже установлен${RESET}"
+    fi
 
     # ------------------------------------------------
     # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
