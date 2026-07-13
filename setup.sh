@@ -120,6 +120,49 @@ install_zerotier() {
 }
 
 # ----------------------------------------------------
+# 🔤 Функция: Установка Nerd Font (иконки для eza/ls и prompt)
+# ----------------------------------------------------
+# Nerd Font нужен, чтобы отображались иконки в `ls` (alias -> eza --icons).
+NERD_FONT_NAME="CaskaydiaCove"      # Nerd-версия шрифта Cascadia Code
+NERD_FONT_DIR="$HOME_DIR/.local/share/fonts"
+NERD_FONT_ZIP_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CascadiaCode.zip"
+
+install_nerd_font() {
+    echo -e "${CYAN}🛠️    Установка Nerd Font (${NERD_FONT_NAME})...${RESET}"
+
+    # macOS: через Homebrew Cask
+    if [[ "$OS_TYPE" == "darwin" ]]; then
+        if brew list --cask font-caskaydia-cove-nerd-font &>/dev/null; then
+            echo -e "${GREEN}✅ Nerd Font уже установлен. Пропускаем.${RESET}"
+        else
+            brew install --cask font-caskaydia-cove-nerd-font 2>/dev/null \
+                && echo -e "${GREEN}✅ Nerd Font установлен через Homebrew.${RESET}" \
+                || echo -e "${RED}❌ Не удалось установить Nerd Font через brew. Установите вручную.${RESET}"
+        fi
+        return
+    fi
+
+    # Linux: скачиваем и ставим в пользовательскую директорию шрифтов
+    if fc-list 2>/dev/null | grep -qi "$NERD_FONT_NAME"; then
+        echo -e "${GREEN}✅ Nerd Font уже установлен. Пропускаем.${RESET}"
+        return
+    fi
+
+    mkdir -p "$NERD_FONT_DIR"
+    local tmp_zip="/tmp/nerdfont_$$.zip"
+    echo -e "${YELLOW}-> Загрузка ${NERD_FONT_NAME} Nerd Font...${RESET}"
+    if curl -fsSL "$NERD_FONT_ZIP_URL" -o "$tmp_zip"; then
+        command -v unzip &>/dev/null || sudo apt-get install -y unzip 2>/dev/null || true
+        unzip -o "$tmp_zip" '*.ttf' -d "$NERD_FONT_DIR" >/dev/null 2>&1 || true
+        fc-cache -f "$NERD_FONT_DIR" >/dev/null 2>&1 || true
+        rm -f "$tmp_zip"
+        echo -e "${GREEN}✅ Nerd Font установлен в $NERD_FONT_DIR${RESET}"
+    else
+        echo -e "${RED}❌ Не удалось скачать Nerd Font. Установите вручную с $NERD_FONT_ZIP_URL${RESET}"
+    fi
+}
+
+# ----------------------------------------------------
 # 🛠️    Определяем ОС
 # ----------------------------------------------------
 OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -187,6 +230,9 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     # ------------------------------------------------
     echo -e "${CYAN}🛠️    Установка базовых пакетов (git, zsh, vim, eza, jq)...${RESET}"
     brew install git zsh vim curl eza jq 2>/dev/null || true
+
+    # 🔤 Nerd Font (иконки для eza/ls)
+    install_nerd_font
 
     # ------------------------------------------------
     # 🐳 Docker Desktop (опционально, через --auto)
@@ -408,6 +454,9 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
         echo -e "${GREEN}✅ eza уже установлен${RESET}"
     fi
 
+    # 🔤 Установка Nerd Font (иконки для eza/ls)
+    install_nerd_font
+
     # ------------------------------------------------
     # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
     # ------------------------------------------------
@@ -502,6 +551,34 @@ fi
 echo -e "${YELLOW}ℹ️     ВАЖНО:${RESET}"
 echo "   - Для применения изменений перезапустите терминал или выполните: source ~/.zshrc"
 echo -e "   - Если использовался тихий режим (--auto), убедитесь, что вы авторизовали ${CYAN}ZeroTier${RESET} в веб-панели управления."
+
+# ----------------------------------------------------
+# 🔤 Инструкция: как подключить Nerd Font (иконки в ls/eza)
+# ----------------------------------------------------
+IS_WSL=0
+grep -qiE "(microsoft|wsl)" /proc/version 2>/dev/null && IS_WSL=1
+
+if [[ "$IS_WSL" -eq 1 ]]; then
+    echo -e "\n${YELLOW}🔤 Обнаружен WSL — иконки рисует Windows Terminal, а не Linux.${RESET}"
+    echo -e "${BLUE}   Шрифт, установленный внутри WSL, на Windows Terminal НЕ влияет.${RESET}"
+    echo -e "${BLUE}   Подключите Nerd Font на стороне Windows:${RESET}"
+    echo "     1. Скачайте CaskaydiaCove Nerd Font:"
+    echo "        $NERD_FONT_ZIP_URL"
+    echo "        (или возьмите уже скачанные .ttf в Проводнике по пути"
+    echo "         \\\\wsl.localhost\\${WSL_DISTRO_NAME:-Ubuntu}\\home\\$USER\\.local\\share\\fonts )"
+    echo "     2. Распакуйте, выделите все *.ttf → ПКМ → «Установить»."
+    echo "     3. Windows Terminal → Параметры → профиль Linux → Внешний вид → Шрифт →"
+    echo -e "        ${CYAN}CaskaydiaCove Nerd Font${RESET}."
+    echo "        Либо в settings.json нужного профиля добавьте:"
+    echo '          "font": { "face": "CaskaydiaCove Nerd Font" }'
+    echo "     4. Перезапустите Windows Terminal."
+elif [[ "$OS_TYPE" == "linux" ]]; then
+    echo -e "\n${YELLOW}🔤 Nerd Font установлен. В настройках терминала выберите шрифт${RESET}"
+    echo -e "   ${CYAN}CaskaydiaCove Nerd Font${RESET} (или любой *Nerd Font*), чтобы появились иконки в ls."
+elif [[ "$OS_TYPE" == "darwin" ]]; then
+    echo -e "\n${YELLOW}🔤 Nerd Font установлен. В настройках терминала (iTerm2/Terminal/WezTerm)${RESET}"
+    echo -e "   выберите шрифт ${CYAN}CaskaydiaCove Nerd Font${RESET}, чтобы появились иконки в ls."
+fi
 #if [[ "$OS_TYPE" == "linux" ]]; then
 #    echo -e "   - Для входа в систему используйте порт ${CYAN}2306${RESET}."
 #fi

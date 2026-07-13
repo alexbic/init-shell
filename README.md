@@ -1,6 +1,6 @@
 # init-shell
 
-Автоматический скрипт настройки пользовательского окружения на новом сервере (macOS и Linux).
+Автоматический скрипт настройки пользовательского окружения на новом сервере (macOS и Linux). Для Windows/WSL есть отдельный `setup.ps1` — установка Nerd Font и настройка Windows Terminal.
 
 > Начиная с этой версии скрипт устанавливает [Herdr](https://herdr.dev) вместо tmux. Если предпочитаете tmux — последняя версия зафиксирована в ветке [`tmux`](https://github.com/alexbic/init-shell/tree/tmux).
 
@@ -10,6 +10,8 @@
 - Устанавливает **Zsh** и **Oh-My-Zsh** с полезными плагинами
 - Устанавливает **Herdr** — agent-aware терминальный мультиплексор (замена tmux)
 - Устанавливает **zoxide** для умной навигации по директориям
+- Устанавливает **eza** (современная замена `ls` с иконками)
+- Устанавливает **Nerd Font** (CaskaydiaCove) для иконок в `eza`/`ls` и prompt
 - Устанавливает **jq** (нужен обёртке `claude()` из dotfiles для работы с Herdr API)
 - Устанавливает **Homebrew** (пакетный менеджер) на macOS и Linux
 - Создаёт директорию пользовательского окружения `~/.myshell`
@@ -54,6 +56,31 @@ export ZEROTIER_NETWORK_ID="your-network-id"
 
 Переменная окружения `ZEROTIER_NETWORK_ID` может быть задана через cloud-config для автоматического подключения к сети ZeroTier.
 
+### Windows (WSL + Windows Terminal) — `setup.ps1`
+
+В сценарии **WSL** иконки в `ls` (eza) рисует Windows Terminal шрифтом со стороны Windows. Nerd Font, установленный внутри Linux через `setup.sh`, на рендеринг Windows Terminal **не влияет** — шрифт нужно поставить в саму Windows. Для этого есть `setup.ps1` (запускать в **PowerShell 7**, права администратора **не нужны**):
+
+```powershell
+# из папки репозитория, напр. \\wsl.localhost\Ubuntu\home\<user>\init-shell
+pwsh -File .\setup.ps1
+```
+
+Скрипт:
+- скачивает **CaskaydiaCove Nerd Font** и ставит per-user (`%LOCALAPPDATA%\Microsoft\Windows\Fonts` + реестр `HKCU`);
+- прописывает шрифт в **Windows Terminal** (`settings.json`, с бэкапом `.bak-nerdfont`);
+- рассылает `WM_FONTCHANGE` — иконки подхватываются без перезапуска терминала.
+
+Полезные параметры:
+
+| Параметр | Назначение |
+|----------|------------|
+| `-ProfileName "Linux"` | прописать шрифт только в указанный профиль WT (иначе — в `profiles.defaults`) |
+| `-SkipTerminalConfig` | только установить шрифт, не трогать настройки терминала |
+| `-Force` | переустановить шрифт, даже если он уже стоит |
+| `-FontFace "..."` | другое имя шрифта (по умолчанию `CaskaydiaCove Nerd Font Mono`) |
+
+> Скрипт идемпотентен: при повторном запуске без `-Force` пропускает установку, если шрифт уже зарегистрирован.
+
 ## Что устанавливается
 
 | Компонент | macOS | Linux (VPS) |
@@ -62,12 +89,16 @@ export ZEROTIER_NETWORK_ID="your-network-id"
 | Zsh + Oh-My-Zsh | ✅ | ✅ |
 | Herdr | ✅ | ✅ |
 | zoxide | ✅ | ✅ |
+| eza | ✅ | ✅ |
+| Nerd Font (CaskaydiaCove) | ✅ | ✅ |
 | jq | ✅ | ✅ |
 | Vim | ✅ | ✅ |
 | zsh-autosuggestions | ✅ | ✅ |
 | zsh-syntax-highlighting | ✅ | ✅ |
 | Docker + Compose V2 | --auto | ✅ (--auto) |
 | ZeroTier | --auto | ✅ (--auto) |
+
+> **Windows-часть** (Nerd Font в саму Windows + настройка Windows Terminal) ставится отдельным скриптом `setup.ps1` — см. раздел «Windows (WSL + Windows Terminal)» выше.
 
 ## Предупреждение
 
