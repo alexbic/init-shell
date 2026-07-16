@@ -121,10 +121,11 @@ configure_linux_locale() {
     fi
     sudo locale-gen "$LINUX_LOCALE"
     if command -v update-locale &>/dev/null; then
-        sudo update-locale LANG="$LINUX_LOCALE" LANGUAGE="$LINUX_LANGUAGE"
+        sudo update-locale LANG="$LINUX_LOCALE" LANGUAGE="$LINUX_LANGUAGE" LC_ALL="$LINUX_LOCALE"
     fi
     export LANG="$LINUX_LOCALE"
     export LANGUAGE="$LINUX_LANGUAGE"
+    export LC_ALL="$LINUX_LOCALE"
     echo -e "${GREEN}✅ Locale по умолчанию: $LINUX_LOCALE${RESET}"
 }
 
