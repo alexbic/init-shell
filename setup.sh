@@ -16,6 +16,7 @@ CYAN='\033[36m'
 HOME_DIR="$(cd "$HOME" && pwd)"
 CURRENT_DIR="$(pwd -P)"
 BASE_DIR="$HOME/.myshell"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 # ----------------------------------------------------
 # ⚙️    Переменные для автоматизации VPS
@@ -51,6 +52,30 @@ GIT_DOTFILES_REPO="https://github.com/alexbic/dotfiles.git"
 GIT_OMZ_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 GIT_OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
 # ... (и другие репозитории) ...
+
+# ----------------------------------------------------
+# 🐑 Функция: Настройка удалённого Herdr для herdr-mirror
+# ----------------------------------------------------
+configure_herdr_remote() {
+    if [[ "$OS_TYPE" != "linux" ]]; then
+        return
+    fi
+
+    echo -e "${CYAN}🛠️    Настройка Herdr как удалённого workspace...${RESET}"
+    mkdir -p "$HOME_DIR/.local/bin" "$HOME_DIR/.config/systemd/user"
+    install -m 755 "$SCRIPT_DIR/herdr-workspace-cwd.py" "$HOME_DIR/.local/bin/herdr-workspace-cwd"
+    install -m 644 "$SCRIPT_DIR/herdr-server.service" "$HOME_DIR/.config/systemd/user/herdr-server.service"
+    install -m 644 "$SCRIPT_DIR/herdr-workspace-cwd.service" "$HOME_DIR/.config/systemd/user/herdr-workspace-cwd.service"
+
+    systemctl --user daemon-reload
+    systemctl --user enable --now herdr-server.service herdr-workspace-cwd.service
+
+    if command -v loginctl &>/dev/null; then
+        sudo loginctl enable-linger "$USER" 2>/dev/null || \
+            echo -e "${YELLOW}   Не удалось включить linger: сервисы запустятся после входа пользователя.${RESET}"
+    fi
+    echo -e "${GREEN}✅ Herdr remote workspace и синхронизация каталога включены${RESET}"
+}
 
 
 # ----------------------------------------------------
@@ -526,6 +551,8 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
       fi
     done
 fi
+
+configure_herdr_remote
 
 #----------------------------------------------------
 # 🗑️    Очистка временной директории

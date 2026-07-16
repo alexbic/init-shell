@@ -9,6 +9,8 @@
 ### Базовая настройка
 - Устанавливает **Zsh** и **Oh-My-Zsh** с полезными плагинами
 - Устанавливает **Herdr** — agent-aware терминальный мультиплексор (замена tmux)
+- На Linux запускает **Herdr Headless Server** и включает его автозапуск
+- Автоматически показывает текущий каталог удалённого workspace в `herdr-mirror`
 - Устанавливает **zoxide** для умной навигации по директориям
 - Устанавливает **eza** (современная замена `ls` с иконками)
 - Устанавливает **gh** (GitHub CLI)
@@ -38,6 +40,61 @@
 ```
 
 Herdr устанавливается официальным инсталлятором (`herdr.dev/install.sh`) как отдельный бинарник, вне `~/.myshell` — конфиг (опциональный) живёт в `~/.config/herdr/config.toml`.
+
+На Linux скрипт также устанавливает пользовательские службы `herdr-server.service` и
+`herdr-workspace-cwd.service`. Для работы после выхода пользователя включается systemd linger.
+Если сервер стартует без workspace, служба автоматически создаёт первый workspace в домашнем каталоге.
+Чтобы новый сервер появился на управляющем Mac, отдельно добавьте его SSH-алиас и секцию
+`[hosts.<name>]` в конфигурацию `herdr-mirror`.
+
+### Подключение нового сервера к herdr-mirror
+
+Эту часть выполняет администратор на управляющем компьютере после запуска `setup.sh` на сервере.
+
+1. Добавьте сервер в `~/.ssh/config`:
+
+   ```sshconfig
+   Host my-server
+       HostName 192.168.88.150
+       User wiz
+       IdentityFile ~/.ssh/id_ed25519_my_server
+   ```
+
+2. Убедитесь, что вход по ключу работает без запроса пароля:
+
+   ```bash
+   ssh -o BatchMode=yes my-server true
+   ```
+
+3. Узнайте точный каталог конфигурации mirror и откройте `hosts.toml`:
+
+   ```bash
+   herdr plugin config-dir mirror
+   ```
+
+   Обычно это `~/.config/herdr/plugins/config/mirror/hosts.toml`. Добавьте сервер:
+
+   ```toml
+   [hosts.my_server]
+   target = "my-server"
+   prefix = "my-server"
+   remote_bin = "~/.local/bin/herdr"
+   always_control = true
+   ```
+
+   Имя секции `my_server` должно быть уникальным, `target` должен совпадать с SSH-алиасом,
+   а `prefix` определяет имя сервера в левой панели Herdr.
+
+4. Запустите mirror и проверьте состояние:
+
+   ```bash
+   herdr-mirror start
+   herdr-mirror status
+   ```
+
+После подключения workspace появится как `my-server: ~/текущий/каталог`. Если daemon mirror
+уже работал во время изменения `hosts.toml`, перезапустите Herdr или daemon mirror, чтобы он
+перечитал конфигурацию.
 
 ## Использование
 

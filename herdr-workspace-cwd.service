@@ -1,0 +1,13 @@
+[Unit]
+Description=Keep Herdr workspace labels synchronized with pane directories
+After=herdr-server.service
+Requires=herdr-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/bin/herdr-workspace-cwd
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
