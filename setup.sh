@@ -77,6 +77,34 @@ configure_herdr_remote() {
     echo -e "${GREEN}✅ Herdr remote workspace и синхронизация каталога включены${RESET}"
 }
 
+install_herdr() {
+    local herdr_bin="$HOME_DIR/.local/bin/herdr"
+    local installer
+    local attempt
+
+    if command -v herdr &>/dev/null || [[ -x "$herdr_bin" ]]; then
+        echo -e "${GREEN}✅ Herdr уже установлен${RESET}"
+        return 0
+    fi
+
+    echo -e "${CYAN}🛠️    Установка Herdr...${RESET}"
+    installer=$(mktemp) || return 1
+    for attempt in 1 2 3; do
+        echo -e "${YELLOW}-> Попытка установки Herdr $attempt/3...${RESET}"
+        if curl --retry 3 --retry-all-errors --connect-timeout 10 --max-time 120 \
+            -fsSL https://herdr.dev/install.sh -o "$installer" && \
+            sh "$installer" && [[ -x "$herdr_bin" ]]; then
+            rm -f "$installer"
+            echo -e "${GREEN}✅ Herdr установлен: $herdr_bin${RESET}"
+            return 0
+        fi
+        sleep 3
+    done
+    rm -f "$installer"
+    echo -e "${RED}❌ Не удалось установить Herdr после трёх попыток.${RESET}" >&2
+    return 1
+}
+
 
 # ----------------------------------------------------
 # 🐳 Функция: Установка Docker и Docker Compose V2
@@ -354,13 +382,7 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     # ------------------------------------------------
     # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
     # ------------------------------------------------
-    if ! command -v herdr &>/dev/null; then
-        echo -e "${CYAN}🛠️    Установка Herdr...${RESET}"
-        curl -fsSL https://herdr.dev/install.sh | sh
-        echo -e "${GREEN}✅ Herdr установлен${RESET}"
-    else
-        echo -e "${GREEN}✅ Herdr уже установлен${RESET}"
-    fi
+    install_herdr || exit 1
 
     # ------------------------------------------------
     # 🗄️    Настройка Dotfiles (используем локальные)
@@ -509,13 +531,7 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
     # ------------------------------------------------
     # 🐑 Установка Herdr (agent-aware терминальный мультиплексор)
     # ------------------------------------------------
-    if ! command -v herdr &>/dev/null; then
-        echo -e "${CYAN}🛠️    Установка Herdr...${RESET}"
-        curl -fsSL https://herdr.dev/install.sh | sh
-        echo -e "${GREEN}✅ Herdr установлен${RESET}"
-    else
-        echo -e "${GREEN}✅ Herdr уже установлен${RESET}"
-    fi
+    install_herdr || exit 1
 
     # ------------------------------------------------
 

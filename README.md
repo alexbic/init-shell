@@ -41,6 +41,11 @@
 
 Herdr устанавливается официальным инсталлятором (`herdr.dev/install.sh`) как отдельный бинарник, вне `~/.myshell` — конфиг (опциональный) живёт в `~/.config/herdr/config.toml`.
 
+Если `herdr.dev` недоступен из региона сервера, перед запуском задайте стандартную
+переменную прокси, например `export HTTPS_PROXY=http://proxy-host:port` или
+`export ALL_PROXY=socks5h://proxy-host:port`. Установщик делает три попытки и завершает
+`setup.sh` с ошибкой, если бинарник `~/.local/bin/herdr` фактически не появился.
+
 На Linux скрипт также устанавливает пользовательские службы `herdr-server.service` и
 `herdr-workspace-cwd.service`. Для работы после выхода пользователя включается systemd linger.
 Если сервер стартует без workspace, служба автоматически создаёт первый workspace в домашнем каталоге.
