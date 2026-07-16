@@ -8,6 +8,7 @@
 
 ### Базовая настройка
 - Устанавливает **Zsh** и **Oh-My-Zsh** с полезными плагинами
+- На Linux генерирует и устанавливает русскую locale `ru_RU.UTF-8` по умолчанию
 - Устанавливает **Herdr** — agent-aware терминальный мультиплексор (замена tmux)
 - На Linux запускает **Herdr Headless Server** и включает его автозапуск
 - Автоматически показывает текущий каталог удалённого workspace в `herdr-mirror`
@@ -118,6 +119,14 @@ export ZEROTIER_NETWORK_ID="your-network-id"
 ```
 
 Переменная окружения `ZEROTIER_NETWORK_ID` может быть задана через cloud-config для автоматического подключения к сети ZeroTier.
+
+Linux locale можно переопределить перед запуском, например:
+
+```bash
+export LINUX_LOCALE=en_US.UTF-8
+export LINUX_LANGUAGE=en_US:en
+./init-shell/setup.sh
+```
 
 ### Windows (WSL + Windows Terminal) — `setup.ps1`
 

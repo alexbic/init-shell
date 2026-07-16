@@ -24,6 +24,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 # Если переменная окружения ZEROTIER_NETWORK_ID задана (через cloud-config),
 # она используется. Иначе - плейсхолдер.
 ZEROTIER_NETWORK_ID="${ZEROTIER_NETWORK_ID:-<ВСТАВЬТЕ_ID_СЕТИ_ЗДЕСЬ_ДЛЯ_ОБЫЧНОГО_РЕЖИМА>}"
+LINUX_LOCALE="${LINUX_LOCALE:-ru_RU.UTF-8}"
+LINUX_LANGUAGE="${LINUX_LANGUAGE:-ru_RU:ru}"
 SILENT_MODE=0
 
 # ----------------------------------------------------
@@ -103,6 +105,27 @@ install_herdr() {
     rm -f "$installer"
     echo -e "${RED}❌ Не удалось установить Herdr после трёх попыток.${RESET}" >&2
     return 1
+}
+
+configure_linux_locale() {
+    if [[ "$OS_TYPE" != "linux" ]]; then
+        return
+    fi
+    echo -e "${CYAN}🌐 Настройка Linux locale: $LINUX_LOCALE...${RESET}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y locales
+    fi
+    if ! command -v locale-gen &>/dev/null; then
+        echo -e "${RED}❌ Команда locale-gen недоступна.${RESET}" >&2
+        return 1
+    fi
+    sudo locale-gen "$LINUX_LOCALE"
+    if command -v update-locale &>/dev/null; then
+        sudo update-locale LANG="$LINUX_LOCALE" LANGUAGE="$LINUX_LANGUAGE"
+    fi
+    export LANG="$LINUX_LOCALE"
+    export LANGUAGE="$LINUX_LANGUAGE"
+    echo -e "${GREEN}✅ Locale по умолчанию: $LINUX_LOCALE${RESET}"
 }
 
 
@@ -429,6 +452,8 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
         sudo apt-get update -y
         sudo apt-get install -y git zsh vim curl jq || true
     fi
+
+    configure_linux_locale || exit 1
 
     # =========================================================
     # ⚙️    VPS Установка: Docker, Compose, ZeroTier (Только --auto)
