@@ -367,11 +367,13 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
     # ------------------------------------------------
     echo -e "${CYAN}🛠️    Настройка Dotfiles...${RESET}"
 
-    # Если dotfiles нет в .myshell, пробуем склонировать
-    if [[ ! -d "$BASE_DIR/dotfiles" ]] && [[ -n "$GIT_DOTFILES_REPO" ]]; then
+    if [[ -d "$BASE_DIR/dotfiles/.git" ]]; then
+        echo -e "${YELLOW}-> Обновление существующих Dotfiles...${RESET}"
+        git -C "$BASE_DIR/dotfiles" pull --ff-only origin main || \
+            echo -e "${YELLOW}   Dotfiles содержат локальные изменения; автоматическое обновление пропущено.${RESET}"
+    elif [[ -n "$GIT_DOTFILES_REPO" ]]; then
         echo -e "${YELLOW}-> Клонирование Dotfiles из репозитория...${RESET}"
-        mkdir -p "$BASE_DIR/dotfiles"
-        git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" 2>/dev/null || true
+        git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles"
     fi
 
     # Создание символических ссылок
@@ -528,7 +530,13 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
     # 🗄️    Настройка Dotfiles
     # ------------------------------------------------
     echo -e "${CYAN}🛠️    Клонирование и настройка Dotfiles...${RESET}"
-    git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles" 2>/dev/null || true
+    if [[ -d "$BASE_DIR/dotfiles/.git" ]]; then
+        echo -e "${YELLOW}-> Обновление существующих Dotfiles...${RESET}"
+        git -C "$BASE_DIR/dotfiles" pull --ff-only origin main || \
+            echo -e "${YELLOW}   Dotfiles содержат локальные изменения; автоматическое обновление пропущено.${RESET}"
+    else
+        git clone "$GIT_DOTFILES_REPO" "$BASE_DIR/dotfiles"
+    fi
 
     # Создание символических ссылок
     echo -e "${YELLOW}-> Создание символических ссылок...${RESET}"
