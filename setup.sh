@@ -64,17 +64,39 @@ configure_herdr_remote() {
     fi
 
     echo -e "${CYAN}🛠️    Настройка Herdr как удалённого workspace...${RESET}"
-    mkdir -p "$HOME_DIR/.local/bin" "$HOME_DIR/.config/systemd/user"
-    install -m 755 "$SCRIPT_DIR/herdr-workspace-cwd.py" "$HOME_DIR/.local/bin/herdr-workspace-cwd"
-    install -m 644 "$SCRIPT_DIR/herdr-server.service" "$HOME_DIR/.config/systemd/user/herdr-server.service"
-    install -m 644 "$SCRIPT_DIR/herdr-workspace-cwd.service" "$HOME_DIR/.config/systemd/user/herdr-workspace-cwd.service"
+    local herdr_bin="$HOME_DIR/.local/bin/herdr"
+    local user_systemd_dir="$HOME_DIR/.config/systemd/user"
 
-    systemctl --user daemon-reload
-    systemctl --user enable --now herdr-server.service herdr-workspace-cwd.service
+    if [[ ! -x "$herdr_bin" ]]; then
+        echo -e "${RED}❌ Herdr отсутствует по ожидаемому пути: $herdr_bin${RESET}" >&2
+        return 1
+    fi
+    if ! command -v systemctl &>/dev/null; then
+        echo -e "${RED}❌ systemctl недоступен: автоматический запуск Herdr настроить нельзя.${RESET}" >&2
+        return 1
+    fi
 
-    if command -v loginctl &>/dev/null; then
-        sudo loginctl enable-linger "$USER" 2>/dev/null || \
-            echo -e "${YELLOW}   Не удалось включить linger: сервисы запустятся после входа пользователя.${RESET}"
+    mkdir -p "$HOME_DIR/.local/bin" "$user_systemd_dir" || return 1
+    install -m 755 "$SCRIPT_DIR/herdr-workspace-cwd.py" "$HOME_DIR/.local/bin/herdr-workspace-cwd" || return 1
+    install -m 644 "$SCRIPT_DIR/herdr-server.service" "$user_systemd_dir/herdr-server.service" || return 1
+    install -m 644 "$SCRIPT_DIR/herdr-workspace-cwd.service" "$user_systemd_dir/herdr-workspace-cwd.service" || return 1
+
+    systemctl --user daemon-reload || return 1
+    systemctl --user enable --now herdr-server.service || return 1
+    systemctl --user enable --now herdr-workspace-cwd.service || return 1
+    systemctl --user is-active --quiet herdr-server.service || return 1
+    systemctl --user is-active --quiet herdr-workspace-cwd.service || return 1
+
+    if ! command -v loginctl &>/dev/null; then
+        echo -e "${RED}❌ loginctl недоступен: нельзя включить службы после выхода пользователя.${RESET}" >&2
+        return 1
+    fi
+    if [[ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" != "yes" ]]; then
+        sudo loginctl enable-linger "$USER" || return 1
+    fi
+    if [[ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" != "yes" ]]; then
+        echo -e "${RED}❌ systemd linger для $USER не включён.${RESET}" >&2
+        return 1
     fi
     echo -e "${GREEN}✅ Herdr remote workspace и синхронизация каталога включены${RESET}"
 }
@@ -84,8 +106,16 @@ install_herdr() {
     local installer
     local attempt
 
-    if command -v herdr &>/dev/null || [[ -x "$herdr_bin" ]]; then
-        echo -e "${GREEN}✅ Herdr уже установлен${RESET}"
+    mkdir -p "$HOME_DIR/.local/bin" || return 1
+
+    if [[ -x "$herdr_bin" ]]; then
+        echo -e "${GREEN}✅ Herdr уже установлен: $herdr_bin${RESET}"
+        return 0
+    fi
+
+    if command -v herdr &>/dev/null; then
+        ln -sf "$(command -v herdr)" "$herdr_bin" || return 1
+        echo -e "${GREEN}✅ Herdr уже установлен; создан путь для systemd: $herdr_bin${RESET}"
         return 0
     fi
 
@@ -602,7 +632,7 @@ elif [[ "$OS_TYPE" == "linux" ]]; then
     done
 fi
 
-configure_herdr_remote
+configure_herdr_remote || exit 1
 
 #----------------------------------------------------
 # 🗑️    Очистка временной директории

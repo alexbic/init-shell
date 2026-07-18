@@ -6,8 +6,10 @@ import os
 import socket
 import time
 
-SOCKET = os.path.expanduser("~/.config/herdr/herdr.sock")
-POLL_SECONDS = 2
+SOCKET = os.environ.get(
+    "HERDR_SOCKET", os.path.expanduser("~/.config/herdr/herdr.sock")
+)
+POLL_SECONDS = float(os.environ.get("HERDR_CWD_POLL_SECONDS", "2"))
 
 
 def request(method, params):
@@ -63,9 +65,14 @@ def sync_labels():
             request("workspace.rename", {"workspace_id": workspace_id, "label": label})
 
 
-while True:
-    try:
-        sync_labels()
-    except (OSError, ValueError, RuntimeError) as error:
-        print(f"herdr-workspace-cwd: {error}", flush=True)
-    time.sleep(POLL_SECONDS)
+def main():
+    while True:
+        try:
+            sync_labels()
+        except (OSError, ValueError, RuntimeError) as error:
+            print(f"herdr-workspace-cwd: {error}", flush=True)
+        time.sleep(POLL_SECONDS)
+
+
+if __name__ == "__main__":
+    main()

@@ -27,4 +27,6 @@ vps/*
 # Environment
 .env
 
-
+# Python caches
+__pycache__/
+*.py[cod]
